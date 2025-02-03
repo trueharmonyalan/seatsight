@@ -1,10 +1,29 @@
 import express from "express"
-
+import passport from "passport"
+import session from "express-session"
+import {Strategy} from "passport-local"
+import pg from "pg"
+import env from "dotenv"
 
 
 
 const app = express()
 const port = 3000
+env.config()
+
+const db = new pg.Client({
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    host: process.env.HOST,
+    database: process.env.DB_DATABASE,
+    port: process.env.PORT
+})
+
+
+
+
+
+
 
 
 
