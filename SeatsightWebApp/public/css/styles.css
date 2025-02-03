@@ -1,3 +1,7 @@
+
+
+
+
 @charset "UTF-8";
 /*!
  * Bootstrap  v5.3.3 (https://getbootstrap.com/)
@@ -80,18 +84,18 @@
   --bs-body-line-height: 1.5;
   --bs-body-color: #212529;
   --bs-body-color-rgb: 33, 37, 41;
-  --bs-body-bg: #fff;
+  --bs-body-bg: #302F2F;
   --bs-body-bg-rgb: 255, 255, 255;
   --bs-emphasis-color: #000;
-  --bs-emphasis-color-rgb: 0, 0, 0;
-  --bs-secondary-color: rgba(33, 37, 41, 0.75);
+  --bs-emphasis-color-rgb: 255, 255, 255;
+  --bs-secondary-color: rgba(214, 214, 214, 0.75);
   --bs-secondary-color-rgb: 33, 37, 41;
   --bs-secondary-bg: #e9ecef;
   --bs-secondary-bg-rgb: 233, 236, 239;
   --bs-tertiary-color: rgba(33, 37, 41, 0.5);
   --bs-tertiary-color-rgb: 33, 37, 41;
   --bs-tertiary-bg: #f8f9fa;
-  --bs-tertiary-bg-rgb: 248, 249, 250;
+  --bs-tertiary-bg-rgb: 29, 28, 28;
   --bs-heading-color: inherit;
   --bs-link-color: #0d6efd;
   --bs-link-color-rgb: 13, 110, 253;
@@ -123,6 +127,49 @@
   --bs-form-valid-border-color: #198754;
   --bs-form-invalid-color: #dc3545;
   --bs-form-invalid-border-color: #dc3545;
+}
+
+.center-it {
+
+  display: flex;
+  justify-content: center;
+  justify-self: center;
+  height: 100vh;
+  align-items: center;
+  color: #ffffff ;
+}
+
+.center-it-footer {
+
+  display: flex;
+  justify-content: center;
+  justify-self: center;
+  align-items: center;
+  color: #ffffff ;
+}
+
+.get-started-ui {
+  background-color: #D9D9D9;
+  border-radius: 27px;
+  height: 500px;
+  width: 500px;
+  display: flex;
+  flex-direction: column; 
+  justify-content: center; 
+  align-items: center; 
+  text-align: center;
+
+}
+
+.get-started-ui-text-color {
+  color: #302F2F;
+}
+
+.element-centering {
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+  gap: 15px; 
 }
 
 [data-bs-theme=dark] {
@@ -204,6 +251,7 @@ body {
   background-color: var(--bs-body-bg);
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+
 }
 
 hr {
@@ -3866,7 +3914,7 @@ textarea.form-control-lg {
 .navbar {
   --bs-navbar-padding-x: 0;
   --bs-navbar-padding-y: 0.5rem;
-  --bs-navbar-color: rgba(var(--bs-emphasis-color-rgb), 0.65);
+  --bs-navbar-color: rgba(var(--bs-emphasis-color-rgb), 0.10);
   --bs-navbar-hover-color: rgba(var(--bs-emphasis-color-rgb), 0.8);
   --bs-navbar-disabled-color: rgba(var(--bs-emphasis-color-rgb), 0.3);
   --bs-navbar-active-color: rgba(var(--bs-emphasis-color-rgb), 1);
