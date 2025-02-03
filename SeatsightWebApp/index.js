@@ -2,6 +2,7 @@ import express from "express"
 import passport from "passport"
 import session from "express-session"
 import {Strategy} from "passport-local"
+import bcrypt from "bcrypt"
 import pg from "pg"
 import env from "dotenv"
 
@@ -18,8 +19,6 @@ const db = new pg.Client({
     database: process.env.DB_DATABASE,
     port: process.env.PORT
 })
-
-
 
 
 
