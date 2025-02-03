@@ -12,6 +12,15 @@ const app = express()
 const port = 3000
 env.config()
 
+// dynamic date for footer.
+
+const date = new Date()
+
+const year = date.getFullYear() 
+
+
+
+//database configuration
 const db = new pg.Client({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -31,7 +40,11 @@ app.use(express.urlencoded({extended:true}))
 
 
 app.get("/",(req,res)=>{
-    res.render("index.ejs")
+    res.render("index.ejs",
+        {
+            year: year
+        }
+    )
 })
 
 app.get("/register",(req,res)=>{
