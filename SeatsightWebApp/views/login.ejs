@@ -11,16 +11,24 @@
 
     <div class="center-it ">
    
-          <div class="get-started-ui">
-                   <div class="element-centering">
+          <div class="get-started-ui-register-login element-centering">
+                   <div>
                        <h2 class="get-started-ui-text-color">
                            Welcome to Seatsight
                        </h2>
            
-                           <div >
-                               <a class="btn btn-primary" href="/register">Register</a>
-                               <a class="btn btn-primary" href="/login">Login</a>
-                           </div>
+                       <form action="/login" method="POST">
+                        <h3 class="get-started-ui-text-color-bold">Login</h3>
+                            <div class="mb-3">
+                            <label for="exampleInputEmail1" class="get-started-ui-text-color">Email</label>
+                            <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+                            </div>
+                            <div class="mb-3">
+                            <label for="exampleInputPassword1" class="get-started-ui-text-color">Password</label>
+                            <input type="password" class="form-control" id="exampleInputPassword1">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Done</button>
+                      </form>
    
                    </div>
                
