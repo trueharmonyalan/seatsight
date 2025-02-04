@@ -11,7 +11,6 @@ router.get("/settings",(req,res)=>{
         res.render("homepage-settings-card.ejs",
             {
                 year: currentYear,
-                state: true
             }
         )
     }else{
