@@ -8,6 +8,7 @@ import { Strategy } from "passport-local";
 // Import route modules
 import indexRoutes from "./routes/index.js";
 import authRoutes from "./routes/authentication.js";
+import homePageSettingcard from "./routes/homepage-settings-card.js"
 // Optionally import db configuration to initialize connection
 import "./config/database.js";
 
@@ -45,7 +46,7 @@ app.set("view engine", "ejs");
 // Use routes
 app.use("/", indexRoutes);
 app.use("/", authRoutes);
-
+app.use("/",homePageSettingcard)
 
 
 
