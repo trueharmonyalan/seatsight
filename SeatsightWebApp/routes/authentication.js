@@ -8,12 +8,16 @@ import pg from "pg"
 import db from "../config/database.js";
 import passport from "passport";
 
+const currentYear = new Date().getFullYear();
 
-
-
+console.log()
 router.get("/auth",(req,res)=>{
   if(req.isAuthenticated()){
-    res.redirect("/home")
+    res.render("home.ejs",{ 
+      year: currentYear,
+      state: true
+    })
+
   }else{
     res.redirect("/")
   }
