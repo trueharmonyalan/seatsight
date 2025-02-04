@@ -1,5 +1,9 @@
 import express from "express"
 import env from "dotenv"
+import session from "express-session";
+import { Strategy } from "passport-local";
+
+
 
 // Import route modules
 import indexRoutes from "./routes/index.js";
@@ -7,11 +11,27 @@ import authRoutes from "./routes/authentication.js";
 // Optionally import db configuration to initialize connection
 import "./config/database.js";
 
+// authentication
+import passport from "./config/passport.js";
+
 
 env.config()
 const app = express()
 const port = process.env.APP_PORT || 3000;
 
+// session implementation
+app.use(session({
+    secret : process.env.SESSION_SECRET,
+    resave : false,
+    saveUninitialized: true,
+    cookie: {
+        maxAge: 1000 * 60 * 60 // 1 hour
+    }
+}))
+
+
+app.use(passport.initialize())
+app.use(passport.session())
 
 
 app.use(express.static('public'));
