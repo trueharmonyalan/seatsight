@@ -17,4 +17,12 @@ router.get("/login",(req,res)=>{
     res.render("login.ejs",{ year: currentYear })
 })
 
+
+router.get("/home",(req,res)=>{
+  res.render("home.ejs",{ 
+    year: currentYear,
+    state: true
+
+  })
+})
 export default router;
