@@ -13,7 +13,7 @@ import passport from "passport";
 
 router.get("/auth",(req,res)=>{
   if(req.isAuthenticated()){
-    res.render("register.ejs")
+    res.redirect("/home")
   }else{
     res.redirect("/")
   }
