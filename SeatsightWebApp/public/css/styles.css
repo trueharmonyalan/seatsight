@@ -244,7 +244,7 @@
   padding-left: 10px;
   border-radius: 14px;
   height: 630px;
-  width: 780px;
+  width: 880px;
   display: flex;
   flex-direction: row; 
   justify-content: center; 
@@ -260,6 +260,7 @@
   justify-self: center;
   align-items: center;
   color: #ffffff ;
+  gap: 5px;
 }
 
 .center-it-booked-info{
