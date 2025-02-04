@@ -1,56 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/css/styles.css">
     <title>Seatsight Register</title>
 </head>
+
 <body>
     <%- include("partials/header.ejs") %>
 
-    <div class="center-it ">
-   
-          <div class="get-started-ui-register-login element-centering">
-                   <div>
-                       <h2 class="get-started-ui-text-color">
-                           Welcome to Seatsight
-                       </h2>
-           
-                       <form action="/register" method="POST">
+        <div class="center-it ">
+
+            <div class="get-started-ui-register-login element-centering">
+                <div>
+                    <h2 class="get-started-ui-text-color">
+                        Welcome to Seatsight
+                    </h2>
+
+                    <form action="/register" method="POST">
                         <h3 class="get-started-ui-text-color-bold">Register</h3>
-                            <div class="mb-3">
+                        <div class="mb-3">
                             <label for="exampleInputEmail1" class="get-started-ui-text-color">Email</label>
-                            <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="username">
-                            </div>
-                            <div class="mb-3">
+                            <input type="email" class="form-control" id="exampleInputEmail1"
+                                aria-describedby="emailHelp" name="username">
+                        </div>
+                        <div class="mb-3">
                             <label for="exampleInputPassword1" class="get-started-ui-text-color">Password</label>
                             <input type="password" class="form-control" id="exampleInputPassword1" name="password">
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary">done</button>
-                            
-                      </form>
-                      
-                      
-                   </div>
-                   <% if(locals.potentialError){ %>
-                    <label for="exampleInputEmail1" style="color: #E52020;"><%= potentialError.noemailError %></label>
-                <% } %>
-                <% if(locals.potentialError){ %>
-                    <label for="exampleInputEmail1" style="color: #E52020;"><%= potentialError.emailError %></label>
-                <% } %>
+                        </div>
 
+                        <button type="submit" class="btn btn-primary">done</button>
+
+                    </form>
+
+
+                </div>
                 <% if(locals.potentialError){ %>
-                    <label for="exampleInputEmail1" style="color: #E52020;"><%= potentialError.noPasswordError %></label>
-                <% } %>
-               </div>
-   
-           </div>
-   
-     </div>
-   
-       
-       <%- include("partials/footer.ejs")  %>
+                    <label for="exampleInputEmail1" style="color: #E52020;">
+                        <%= potentialError.noemailError %>
+                    </label>
+                    <% } %>
+                        <% if(locals.potentialError){ %>
+                            <label for="exampleInputEmail1" style="color: #E52020;">
+                                <%= potentialError.emailError %>
+                            </label>
+                            <% } %>
+
+                                <% if(locals.potentialError){ %>
+                                    <label for="exampleInputEmail1" style="color: #E52020;">
+                                        <%= potentialError.noPasswordError %>
+                                    </label>
+                                    <% } %>
+            </div>
+
+        </div>
+
+        </div>
+
+
+        <%- include("partials/footer.ejs") %>
 </body>
+
 </html>
