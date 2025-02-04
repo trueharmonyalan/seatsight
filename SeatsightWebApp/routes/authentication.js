@@ -23,6 +23,8 @@ router.get("/auth",(req,res)=>{
   }
 })
 
+
+
 router.get("/logout",(req,res)=>{
   req.logout((err)=>{
     if(err){

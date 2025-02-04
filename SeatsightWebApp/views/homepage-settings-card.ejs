@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+</head>
+<body>
+    <%- include("partials/header.ejs") %>
+
+    <% if(locals.info){ %>
+
+        <div class="custom-design-settings-active">
+
+            <div class="settings-card-active">
+                <div class="element-centering">
+                    <% if(info.showFromUrlState){ %>
+                    <img src="<%= info.showUrl %>" width="720" height="480"></img>
+                    <p style="color: #302F2F">URL: <%- info.showUrl %></p>
+                    <div class="center-it-button">
+                        <a href="/settings" class="btn btn-primary">Back</a>
+                        <a href="/auth" class="btn btn-primary">Done</a>
+                    </div>
+                   
+                    <% }else{ %>
+                        <p style="color: #302F2F">Url not Provided.</p>
+                        <div class="center-it-button">
+                            <a href="/settings" class="btn btn-primary">Back</a>
+                            <a href="/auth" class="btn btn-primary">Home</a>
+                        </div>
+                       
+                        
+                    <% } %>
+                </div>
+                    
+
+                </div>
+
+                
+            </div>
+
+
+        </div>
+
+
+    <% }else{ %>
+
+    <div class="custom-design-settings">
+
+        <div class="settings-card ">
+            <form method="POST", action="/settings">
+                <div class="mb-3">
+                  <label for="exampleInputEmail1" class="form-label">URL</label>
+                  <input type="url" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="ipurl">
+                  <div id="emailHelp" class="form-text">Provide URL of source (IP-Camera)</div>
+                </div>
+                <a href="/auth" class="btn btn-primary">Back</a>
+                <button type="submit" class="btn btn-primary">Done</button>
+               
+                
+              </form>
+        
+          </div>
+
+    </div>
+
+    <% } %>
+  
+  
+    
+  
+  
+  
+  
+  
+  
+  
+    <%- include("partials/footer.ejs")  %>    
+    
+</body>
+</html>
