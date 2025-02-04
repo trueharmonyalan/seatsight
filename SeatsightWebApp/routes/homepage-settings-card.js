@@ -1,8 +1,7 @@
-import express from "express"
-import passport from "passport"
+import express from "express";
+import passport from "passport";
 
-
-const router = express.Router()
+const router = express.Router();
 
 const currentYear = new Date().getFullYear();
 
@@ -21,38 +20,21 @@ router.get("/settings",(req,res)=>{
 
 
 
-router.post("/settings",(req,res)=>{
-    const url = req.body.ipurl
-    console.log(url)
+router.post("/settings", (req, res) => {
+  const url = req.body.ipurl;
+  console.log(url);
 
-    var urlActive = false
-    if(url){
-        urlActive = true
-    }
+  var urlActive = false;
+  if (url) {
+    urlActive = true;
+  }
 
-    res.render("homepage-settings-card.ejs",{
+  res.render("homepage-settings-card.ejs", {
+    info: {
+      showFromUrlState: urlActive,
+      showUrl: url,
+    },
+  });
+});
 
-        info: {
-            showFromUrlState : urlActive,
-            showUrl: url
-
-        }
-        
-    }
-        
-    )
-})
-
-
-
-
-
-
-
-
-
-
-
-
-
-export default router
+export default router;
