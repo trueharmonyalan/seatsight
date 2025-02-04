@@ -134,8 +134,19 @@
   display: flex;
   justify-content: center;
   justify-self: center;
-  height: 100vh;
+  height: 80vh;
   align-items: center;
+  color: #ffffff ;
+}
+
+.center-it-home {
+
+  display: flex;
+  justify-content: center;
+  justify-self: center;
+  align-items: center;
+  height: 80vh;
+  gap: 30px;
   color: #ffffff ;
 }
 
@@ -4384,7 +4395,7 @@ textarea.form-control-lg {
   height: var(--bs-card-height);
   color: var(--bs-body-color);
   word-wrap: break-word;
-  background-color: var(--bs-card-bg);
+  background-color: #D9D9D9;
   background-clip: border-box;
   border: var(--bs-card-border-width) solid var(--bs-card-border-color);
   border-radius: var(--bs-card-border-radius);
