@@ -21,17 +21,20 @@
                         <h3 class="get-started-ui-text-color-bold">Register</h3>
                             <div class="mb-3">
                             <label for="exampleInputEmail1" class="get-started-ui-text-color">Email</label>
-                            <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+                            <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="username">
                             </div>
                             <div class="mb-3">
                             <label for="exampleInputPassword1" class="get-started-ui-text-color">Password</label>
-                            <input type="password" class="form-control" id="exampleInputPassword1">
+                            <input type="password" class="form-control" id="exampleInputPassword1" name="password">
                             </div>
                             <button type="submit" class="btn btn-primary">done</button>
+                            
                       </form>
-   
+                      
                    </div>
-               
+                   <% if(locals.potentialError){ %>
+                    <label for="exampleInputEmail1" style="color: #E52020;"><%= potentialError.emailError %></label>
+                <% } %>
                </div>
    
            </div>
