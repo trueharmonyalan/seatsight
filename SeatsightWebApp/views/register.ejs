@@ -31,10 +31,18 @@
                             <button type="submit" class="btn btn-primary">done</button>
                             
                       </form>
+                      <a href="/logout">Logout</a>
                       
                    </div>
                    <% if(locals.potentialError){ %>
+                    <label for="exampleInputEmail1" style="color: #E52020;"><%= potentialError.noemailError %></label>
+                <% } %>
+                <% if(locals.potentialError){ %>
                     <label for="exampleInputEmail1" style="color: #E52020;"><%= potentialError.emailError %></label>
+                <% } %>
+
+                <% if(locals.potentialError){ %>
+                    <label for="exampleInputEmail1" style="color: #E52020;"><%= potentialError.noPasswordError %></label>
                 <% } %>
                </div>
    
