@@ -19,38 +19,72 @@ router.get("/auth",(req,res)=>{
   }
 })
 
+router.get("/logout",(req,res)=>{
+  req.logout((err)=>{
+    if(err){
+      return err
+    }
+    res.redirect("/")
+  })
+
+})
 
 
 
 router.post("/register", async (req, res) => {
-  const email = req.body.username
-  const password = req.body.password
+    const email = req.body.username
+    const password = req.body.password
+
+    console.log(email)
+    console.log(password)
+
+    if(!req.body.username){
+      res.render("register.ejs",{
+        potentialError:{
+          noemailError: "Provide your email.",
+        }
+    })
+  }
+
+    if(!req.body.password){
+      res.render("register.ejs",{
+        potentialError:{
+          noPasswordError: "Provide your password.",
+        }
+    })
+  }
 
   try{
 
     const checkEmail = await db.query("select * from users where email = $1",[email])
 
+
     if(checkEmail.rows.length>0){
       res.render("register.ejs",{
           potentialError:{
-            emailError: "This Email already registered with us.",
+            emailError: "This email is already registered with us.",
           }
       })
       
     }else{
 
         const hash = await argon2.hash(password)
-        await db.query("insert into users(email,password) values ($1,$2)",[email,hash])
-        res.send("authenticated")
-     
+        const result =await db.query("insert into users(email,password) values ($1,$2) RETURNING *",[email,hash])
+        
+        const user = result.rows[0]
+
+        req.login(user,(err)=>{
+          console.log(err)
+          res.redirect("/auth")
+        })
+
+       
     }
 
   }catch(err){
     console.log(err)
   }
-
-
-
+  
 });
 
 
@@ -58,8 +92,8 @@ router.post("/register", async (req, res) => {
 
 router.post("/login",passport.authenticate("local",{
   successRedirect: "/auth",
-  failureRedirect: "login"
-
+  failureRedirect: "login",
+  
 }));
 
 
