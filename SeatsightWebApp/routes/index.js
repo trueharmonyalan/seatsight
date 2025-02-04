@@ -10,11 +10,11 @@ router.get("/", (req, res) => {
 });
 
 router.get("/register",(req,res)=>{
-    res.render("register.ejs")
+    res.render("register.ejs",{ year: currentYear })
 })
 
 router.get("/login",(req,res)=>{
-    res.render("login.ejs")
+    res.render("login.ejs",{ year: currentYear })
 })
 
 export default router;
