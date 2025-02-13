@@ -6,7 +6,12 @@ import { Strategy } from "passport-local";
 // Import route modules
 import indexRoutes from "./routes/index.js";
 import authRoutes from "./routes/authentication.js";
+<<<<<<< HEAD
 import homePageSettingcard from "./routes/homepage-settings-card.js";
+=======
+import homePageSettingcard from "./routes/homepage-settings-card.js"
+import bookedSeats from "./routes/booked-seat-info.js"
+>>>>>>> a1dd6c3 (booked seats configured)
 // Optionally import db configuration to initialize connection
 import "./config/database.js";
 
@@ -41,7 +46,12 @@ app.set("view engine", "ejs");
 // Use routes
 app.use("/", indexRoutes);
 app.use("/", authRoutes);
+<<<<<<< HEAD
 app.use("/", homePageSettingcard);
+=======
+app.use("/",homePageSettingcard)
+app.use("/",bookedSeats)
+>>>>>>> a1dd6c3 (booked seats configured)
 
 app.listen(port, () => {
   console.log(`server is running on port ${port}`);
