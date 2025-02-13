@@ -8,8 +8,27 @@
 </head>
 <body>
     <%- include("partials/header.ejs") %>
-
-    
+    <% if(locals.info){ %>
+        
+    <div class="center-it-booked-info">
+        <div class="get-started-ui-booked-info">
+            <h3>Booked seats are:<%= info.bookedSeats%>/<%= info.totalSeats %></h3>
+            <div class="center-it-button">
+                <a href="/auth" class="btn btn-primary">Back</a>
+            </div>
+        </div>
+    </div>
+    <% }else{ %>
+        <div class="center-it-booked-info">
+            <div class="get-started-ui-booked-info">
+                <h3>No bookings yet.</h3>
+                <div class="center-it-button">
+                    <a href="/auth" class="btn btn-primary">Back</a>
+                </div>
+            </div>
+            
+        </div>
+        <% } %>
 
 
     <%- include("partials/footer.ejs")  %>    
