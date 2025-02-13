@@ -14,6 +14,8 @@ router.get("/bookedInfo",(req,res)=>{
             }
             
         })
+    } else{
+        res.redirect("/")
     }
     
 })
