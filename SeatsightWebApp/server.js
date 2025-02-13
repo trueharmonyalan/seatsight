@@ -1,7 +1,6 @@
 import express from "express";
 import env from "dotenv";
 import session from "express-session";
-import { Strategy } from "passport-local";
 
 // Import route modules
 import indexRoutes from "./routes/index.js";
