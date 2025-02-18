@@ -55,7 +55,7 @@ router.post("/register", async (req, res) => {
   }
 
   try {
-    const checkEmail = await db.query("select * from users where email = $1", [
+    const checkEmail = await db.query("select * from users where username = $1", [
       email,
     ]);
 
@@ -68,7 +68,7 @@ router.post("/register", async (req, res) => {
     } else {
       const hash = await argon2.hash(password);
       const result = await db.query(
-        "insert into users(email,password) values ($1,$2) RETURNING *",
+        "insert into users(username,password) values ($1,$2) RETURNING *",
         [email, hash]
       );
 
