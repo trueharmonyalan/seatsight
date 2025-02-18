@@ -6,7 +6,7 @@ const currentYear = new Date().getFullYear()
 
 router.get("/menu",(req,res)=>{
     if(req.isAuthenticated()){
-        res.render("booked-seat-info.ejs")
+        res.render("update-menu.ejs")
     } else{
         res.redirect("/")
     }
