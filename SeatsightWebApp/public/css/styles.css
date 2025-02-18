@@ -373,7 +373,7 @@
 /* Submit Button using Bootstrap Primary Button */
 button[type="submit"] {
   @extend .btn, .btn-dark; /* Bootstrap dark button */
-  margin-top: 15px;
+  
 }
 
 /* Notification Styling */
