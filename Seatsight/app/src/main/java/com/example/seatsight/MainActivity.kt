@@ -19,6 +19,9 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.seatsight.UI.authentication.AuthHome
+import com.example.seatsight.UI.authentication.LoginScreen
+import com.example.seatsight.UI.authentication.RegisterScreen
 import com.example.seatsight.UI.homescreen
 import com.example.seatsight.UI.welcomeScreen
 import com.example.seatsight.ui.theme.SeatsightTheme
@@ -47,7 +50,7 @@ fun SeatSightApp(){
         val context = LocalContext.current
         val appPreferences = remember { SharedPreferenceOnboardingProcess(context) }
         val startDestination = if(appPreferences.isWelcomeScreenCompleted){
-            Home.route
+            AuthScreen.route
         }else {
             Welcome.route
         }
@@ -63,13 +66,27 @@ fun SeatSightApp(){
                     welcomeScreen(
                         onClickContinue = {
                             appPreferences.isWelcomeScreenCompleted=true
-                            navController.navigate(Home.route){
+                            navController.navigate(AuthScreen.route){
                                 popUpTo(Welcome.route) {
                                     inclusive = true
                                 }
                             }
                         }
                     )
+                }
+
+
+
+                composable(route = AuthScreen.route){
+                    AuthHome(navController = navController)
+                }
+
+                composable(route = LoginScreen.route){
+                    LoginScreen(navController = navController) // Pass navController
+                }
+
+                composable(route = RegisterScreen.route){
+                    RegisterScreen(navController = navController) // Pass navController
                 }
 
                     composable(route = Home.route){
