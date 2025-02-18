@@ -7,7 +7,7 @@ import db from "./database.js";
 passport.use(
   new Strategy(async function verify(usename, password, cb) {
     try {
-      const result = await db.query("select * from users where email = $1", [
+      const result = await db.query("select * from users where username = $1", [
         usename,
       ]);
 

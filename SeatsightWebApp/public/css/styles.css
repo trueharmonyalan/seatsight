@@ -129,6 +129,12 @@
   --bs-form-invalid-border-color: #dc3545;
 }
 
+
+
+.update-button {
+  background-color:#ffffff ;
+}
+
 .center-it {
 
   display: flex;
@@ -308,6 +314,79 @@
   align-items: center; 
 
 }
+
+
+/* Centering the container */
+.update-menu-container {
+  background-color: #D9D9D9;
+  border-radius: 27px;
+  height: 100vh;
+  width: 500px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+  margin: 50px auto; /* Center the container on the screen */
+}
+
+/* Text color styling */
+.update-menu-text-color {
+  color: #302F2F;
+}
+
+/* Item Container - Scrollable section for new items */
+.item-container {
+  width: 100%;
+  overflow-y: auto; /* Make only this section scrollable */
+  max-height: 350px; /* Set a max height for scrolling */
+  margin-bottom: 20px;
+}
+
+/* Item Fields Styling */
+.item {
+  background-color: #fff;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.item input, .item textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+/* Bootstrap Button Variants */
+.item button.remove-item {
+  @extend .btn, .btn-danger; /* Bootstrap danger button */
+}
+
+.item button.remove-item:hover {
+  background-color: darkred; /* Ensure hover effect remains */
+}
+
+/* Submit Button using Bootstrap Primary Button */
+button[type="submit"] {
+  @extend .btn, .btn-dark; /* Bootstrap dark button */
+  margin-top: 15px;
+}
+
+/* Notification Styling */
+#response {
+  margin-top: 20px;
+  display: none;
+  padding: 10px;
+  background-color: #28a745; /* Green color */
+  color: white;
+  border-radius: 5px;
+}
+
+
 
 [data-bs-theme=dark] {
   color-scheme: dark;

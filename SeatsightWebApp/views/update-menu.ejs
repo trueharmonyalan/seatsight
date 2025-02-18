@@ -1,16 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/css/styles.css">
-    <title>Booked seat info</title>
+    <title>Update Menu</title>
+  
 </head>
 <body>
     <%- include("partials/header.ejs") %>
-    
 
+    <div class="container">
+        <h2 style="color: #D9D9D9;"> Menu Items</h2>
+        <form id="itemForm">
+            <div id="itemContainer">
+                <!-- Items will be dynamically rendered here -->
+            </div>
 
-    <%- include("partials/footer.ejs")  %>    
+            <div id="buttonContainer" >
+                <button type="button" onclick="addItem()" id="addItemBtn" class="btn btn-light" >Add Item</button>
+                <button type="button" onclick="window.location.href='/auth'" id="backBtn" class="btn btn-light">Back</button>
+                <!-- <button type="submit" id="submitBtn" class="btn btn-secondary">Save Changes</button> -->
+                <input type="submit" id="submitBtn" class="btn btn-primary">
+            </div>
+        </form>
+        <div id="message"></div>
+    </div>
+
+    <%- include("partials/footer.ejs") %>
+
+    <script>
+        let removedItems = [];
+
+        window.onload = async () => {
+            const response = await fetch('/fetch-items');
+            const items = await response.json();
+            renderItems(items);
+        };
+
+        function renderItems(items) {
+            const container = document.getElementById('itemContainer');
+            container.innerHTML = items.length === 0 ? '<p style="color: #D9D9D9;">No items found. Add new items.</p>' : '';
+
+            items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'item';
+                itemDiv.dataset.id = item.id;
+                
+                itemDiv.innerHTML = `
+                    <input type="text" value="${item.name}" disabled required>
+                    <textarea disabled required>${item.description}</textarea>
+                    <button type="button" onclick="toggleEdit(this)" class="btn btn-success" >Update</button>
+                    <button type="button" onclick="removeItem(this)" class="btn btn-danger remove-item" >Remove</button>
+                `;
+                container.appendChild(itemDiv);
+            });
+        }
+
+        function addItem() {
+            const container = document.getElementById('itemContainer');
+            container.insertAdjacentHTML('beforeend', `
+                <div class="item">
+                    <input type="text" placeholder="Item Name" required>
+                    <textarea placeholder="Item Description" required></textarea>
+                    <button type="button" onclick="toggleEdit(this)" class="btn btn-dark">Update</button>
+                    <button type="button" onclick="removeItem(this)" class="btn btn-danger remove-item">Remove</button>
+                </div>
+            `);
+        }
+
+        function toggleEdit(btn) {
+            const item = btn.closest('.item');
+            const input = item.querySelector('input');
+            const textarea = item.querySelector('textarea');
+            
+            if (input.disabled) {
+                input.disabled = false;
+                textarea.disabled = false;
+                btn.textContent = 'Done';
+            } else {
+                input.disabled = true;
+                textarea.disabled = true;
+                btn.textContent = 'Update';
+            }
+        }
+
+        function removeItem(btn) {
+            const item = btn.closest('.item');
+            const id = item.dataset.id;
+            if (id) removedItems.push(id);
+            item.remove();
+        }
+
+        document.getElementById('itemForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const items = Array.from(document.querySelectorAll('.item')).map(item => ({
+                id: item.dataset.id || null,
+                name: item.querySelector('input').value,
+                description: item.querySelector('textarea').value
+            }));
+
+            try {
+                const response = await fetch('/submit-items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items, removedItems })
+                });
+                
+                const result = await response.json();
+                showMessage(result.message);
+                removedItems = [];
+                window.location.reload();
+            } catch (error) {
+                showMessage('Error saving changes');
+            }
+        });
+
+        function showMessage(text) {
+            const div = document.getElementById('message');
+            div.textContent = text;
+            setTimeout(() => div.textContent = '', 3000);
+        }
+    </script>
+
 </body>
 </html>
