@@ -4,6 +4,7 @@ import db from "../config/database.js";
 const router = express.Router();
 const currentYear = new Date().getFullYear();
 // Authentication middleware
+// new
 const ensureAuthenticated = (req, res, next) => {
     if (req.isAuthenticated()) return next();
     res.redirect("/");
