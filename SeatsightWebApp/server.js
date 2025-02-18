@@ -7,6 +7,7 @@ import indexRoutes from "./routes/index.js";
 import authRoutes from "./routes/authentication.js";
 import homePageSettingcard from "./routes/homepage-settings-card.js"
 import bookedSeats from "./routes/booked-seat-info.js"
+import updateMenu from "./routes/update-menu.js"
 // Optionally import db configuration to initialize connection
 import "./config/database.js";
 
@@ -43,6 +44,7 @@ app.use("/", indexRoutes);
 app.use("/", authRoutes);
 app.use("/",homePageSettingcard)
 app.use("/",bookedSeats)
+app.use("/",updateMenu)
 
 
 
