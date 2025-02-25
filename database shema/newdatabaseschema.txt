@@ -1,0 +1,61 @@
+-- 1️⃣ Owners Table (For Web App)
+CREATE TABLE owners (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 2️⃣ Customers Table (For Android App)
+CREATE TABLE customers (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 3️⃣ Restaurants Table (Managed by Owners)
+CREATE TABLE restaurants (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER REFERENCES owners(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    address TEXT NOT NULL,
+    ip_camera_url TEXT DEFAULT NULL
+);
+
+-- 4️⃣ Menu Items Table (Restaurant Menu)
+CREATE TABLE menu_items (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    price DECIMAL(10,2) NOT NULL
+);
+
+-- 5️⃣ Seats Table (Real-time updates from Deep Learning)
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    position_x FLOAT NOT NULL,
+    position_y FLOAT NOT NULL,
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied')) NOT NULL DEFAULT 'vacant'
+);
+
+-- 6️⃣ Reservations Table (For Bookings by Customers)
+CREATE TABLE reservations (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    status VARCHAR(20) CHECK (status IN ('pending', 'confirmed', 'canceled')) NOT NULL DEFAULT 'pending',
+    timestamp TIMESTAMP DEFAULT NOW()
+);
+
+-- 7️⃣ Live Seat Status Table (Updated by Deep Learning Model)
+CREATE TABLE seat_status (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied')) NOT NULL
+);
