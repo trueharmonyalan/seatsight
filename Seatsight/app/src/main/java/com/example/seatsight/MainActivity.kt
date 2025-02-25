@@ -1,6 +1,6 @@
 package com.example.seatsight
 
-import BookSeatWindow
+import BookingConfirmationScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,16 +9,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.seatsight.UI.BookSeatScreen
+import com.example.seatsight.UI.BookSeatWindow
 import com.example.seatsight.UI.authentication.AuthHome
 import com.example.seatsight.UI.authentication.LoginScreen
 import com.example.seatsight.UI.authentication.RegisterScreen
@@ -97,18 +97,45 @@ fun SeatSightApp(){
                     ViewSeatAvailableHotelList.screen()
                 }
 
-                composable(route = AvailableHotelsForBookSeat.route){
-                    AvailableHotelsForBookSeat.screen()
+//                composable(route = AvailableHotelsForBookSeat.route){
+//                    AvailableHotelsForBookSeat.screen()
+//                }
+
+
+
+                    composable(route = AvailableHotelsForBookSeat.route) {
+                        BookSeatWindow(navController = navController)
+                    }
+
+                // Navigate to BookSeatScreen with dynamic hotel name
+                composable(route = bookSeatScreen.route) { backStackEntry ->
+                    val hotelName = backStackEntry.arguments?.getString("hotelName") ?: ""
+                    bookSeatScreen.screen(mapOf("hotelName" to hotelName), navController)
                 }
 
+                // Navigate to BookingConfirmationScreen with selected seats
+                composable(route = bookingConfirmation.route) { backStackEntry ->
+                    val hotelName = backStackEntry.arguments?.getString("hotelName") ?: ""
+                    val selectedSeats = backStackEntry.arguments?.getString("selectedSeats") ?: ""
+
+                    bookingConfirmation.screen(
+                        mapOf(
+                            "hotelName" to hotelName,
+                            "selectedSeats" to selectedSeats
+                        ),
+                        navController
+                    )
                 }
 
-                }
 
             }
 
-
         }
+
+    }
+
+
+}
 
 
 
@@ -193,8 +220,8 @@ private fun ViewSeatDisplay(
 
 //@Preview
 //@Composable
-//fun bookSeatWindow(){
+//fun com.example.seatsight.UI.bookSeatWindow(){
 //    SeatsightTheme {
-//        BookSeatWindow()
+//        com.example.seatsight.UI.BookSeatWindow()
 //    }
 //}

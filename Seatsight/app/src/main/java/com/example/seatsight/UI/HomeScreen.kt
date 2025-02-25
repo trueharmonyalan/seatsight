@@ -138,7 +138,7 @@ val surfaceColor = Color(android.graphics.Color.parseColor("#E4E4E4"))
                                     .padding(start = 10.dp)
                             )
 
-                            displayListMenu(hotelDetail = hotels)
+                            displayListMenuForHome(hotelDetail = hotels)
 
                         }
 

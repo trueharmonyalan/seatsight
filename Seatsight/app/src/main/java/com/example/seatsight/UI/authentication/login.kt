@@ -33,25 +33,26 @@ fun LoginScreen(navController: NavController) {
     val focusColor = Color(android.graphics.Color.parseColor("#302F2F")) // Same as login button color
 
     fun validateAndLogin() {
-        when {
-            email.isBlank() -> {
-                errorMessage = "Please enter your email."
-                showErrorDialog = true
-            }
-            password.isBlank() -> {
-                errorMessage = "Please enter your password."
-                showErrorDialog = true
-            }
-            email != "admin@admin" || password != "admin" -> {
-                errorMessage = "Invalid email or password. Please try again."
-                showErrorDialog = true
-            }
-            else -> {
-                navController.navigate(Home.route) {
-                    popUpTo(AuthScreen.route) { inclusive = true }
-                }
-            }
-        }
+        navController.navigate(Home.route)
+//        when {
+//            email.isBlank() -> {
+//                errorMessage = "Please enter your email."
+//                showErrorDialog = true
+//            }
+//            password.isBlank() -> {
+//                errorMessage = "Please enter your password."
+//                showErrorDialog = true
+//            }
+//            email != "a@a" || password != "a" -> {
+//                errorMessage = "Invalid email or password. Please try again."
+//                showErrorDialog = true
+//            }
+//            else -> {
+//                navController.navigate(Home.route) {
+//                    popUpTo(AuthScreen.route) { inclusive = true }
+//                }
+//            }
+//        }
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {

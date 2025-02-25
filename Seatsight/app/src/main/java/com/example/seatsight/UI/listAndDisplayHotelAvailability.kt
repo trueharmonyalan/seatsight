@@ -2,6 +2,7 @@ package com.example.seatsight.UI
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
@@ -23,39 +25,107 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.seatsight.data.HotelDetails
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 //hotel's name and description is maintained here
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 @Composable
-private fun listMenu(
+fun listofAvailableHotels(
+    hotel: HotelDetails,
+    onHotelSelected: (String) -> Unit
+) {
+    val buttonColor = Color(android.graphics.Color.parseColor("#BB0000"))
+    val textColor = Color(android.graphics.Color.parseColor("#EFEFEF"))
+    val containerColor = Color(android.graphics.Color.parseColor("#F0EBEB"))
+
+    Surface(
+        modifier = Modifier.padding(vertical = 10.dp, horizontal = 10.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .background(containerColor)
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    modifier = Modifier.weight(0.7f)
+                ) {
+                    Text(
+                        text = hotel.name,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = hotel.description,
+                        fontSize = 16.sp
+                    )
+                }
+
+                // Navigate to BookSeatScreen with the selected hotel name
+                Button(
+                    onClick = {
+                        onHotelSelected(hotel.name)
+                    },
+                    colors = ButtonDefaults.buttonColors(buttonColor)
+                ) {
+                    Text(text = "Book Seat", color = textColor)
+                }
+            }
+        }
+    }
+}
+
+
+
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//this composable is responsible for the display of scrollable hotel details with each hotel details
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+@Composable
+fun DisplaylistofAvailableHotels(
+    hotelDetail: List<HotelDetails>,
+    onHotelSelected: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.padding(horizontal = 0.dp)
+    ) {
+        items(items = hotelDetail) { hotel ->
+            listofAvailableHotels(hotel = hotel,onHotelSelected = onHotelSelected)
+        }
+    }
+}
+
+
+@Composable
+fun listMenuForHome(
     modifier: Modifier = Modifier,
     hotel: HotelDetails,
 ) {
-//????????????????????????????????????????????
-//    Color variables
     val menuButtonColor = Color(android.graphics.Color.parseColor("#BB0000"))
     val menuTextColor = Color(android.graphics.Color.parseColor("#EFEFEF"))
     val menuContainerColor = Color(android.graphics.Color.parseColor("#F0EBEB"))
-//    ?????????????????????????????????????????????????/
 
     var expandMenuButton by remember { mutableStateOf(false) }
     val expandMenuPadding by animateDpAsState(if (expandMenuButton) 50.dp else 0.dp)
 
-
-
-
-
     Surface(
-        modifier = modifier.padding(vertical = 10.dp, horizontal = 10.dp)
+        modifier = modifier.padding(vertical = 10.dp, horizontal = 10.dp),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier
                 .background(menuContainerColor)
                 .padding(bottom = expandMenuPadding),
-
-            ) {
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -67,13 +137,16 @@ private fun listMenu(
                 ) {
                     Text(
                         text = hotel.name,
-                        modifier = Modifier.padding(vertical = 5.dp, horizontal = 0.dp)
+                        modifier = Modifier
+                            .padding(vertical = 5.dp, horizontal = 0.dp)
                             .padding(start = 8.dp),
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = hotel.description,
-                        modifier = Modifier.padding(start = 8.dp)
+                        modifier = Modifier.padding(start = 8.dp),
+                        fontSize = 14.sp
                     )
                 }
                 Button(
@@ -88,34 +161,32 @@ private fun listMenu(
                 }
             }
 
-            // Expanded content : Menu updates are displayed here.
+            // Expanded content: Show menu items when button is clicked
             if (expandMenuButton) {
-                Text(
-                    text = "Additional menu items or details...",
-                    modifier = Modifier.padding(start = 8.dp, top = 8.dp)
-                )
+                Column(modifier = Modifier.padding(start = 8.dp, top = 8.dp)) {
+                    hotel.menuItems.forEach { menuItem ->
+                        Text(
+                            text = "• $menuItem",
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-
-
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-//this composable is responsible for the display of scrollable hotel details with each hotel details
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 @Composable
-fun displayListMenu(
+fun displayListMenuForHome(
     modifier: Modifier = Modifier,
     hotelDetail: List<HotelDetails>
 ) {
-
     LazyColumn(
         modifier = modifier.padding(horizontal = 0.dp)
     ) {
         items(items = hotelDetail) { hotel ->
-            listMenu(hotel = hotel) // Display each hotel
+            listMenuForHome(hotel = hotel) // Uses the version without seat booking
         }
     }
 }
-//
