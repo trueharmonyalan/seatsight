@@ -42,54 +42,61 @@
 
 
 import passport from "passport";
-import { Strategy } from "passport-local";
+import { Strategy} from "passport-local";
 import argon2 from "argon2";  // Use correct argon2 import
 import fetch from "node-fetch"; // Ensure fetch is available
-
 passport.use(
   new Strategy({ usernameField: "email" }, async (email, password, done) => {
+    console.log("Passport Debug: Login attempt ->", { email, password });
+
     if (!email) return done(null, false, { message: "Enter email" });
     if (!password) return done(null, false, { message: "Enter password" });
 
     try {
-      const response = await fetch("http://localhost:3001/api/owners/login", { // ✅ Ensure correct port
+      const response = await fetch("http://localhost:3001/api/owners/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
+      console.log("Passport Debug: API Response Status ->", response.status);
+
       const data = await response.json();
-      
+      console.log("Passport Debug: API Response Data ->", data);
+
       if (!response.ok) {
         return done(null, false, { message: data.error || "Login failed" });
       }
 
-      // ✅ Fix: Only store `owner_id` and `email` (do not return password)
-      return done(null, { id: data.owner_id, email: data.email });
+      if (!data.user || !data.user.id) {
+        console.error("Passport Debug: No valid user returned from API.");
+        return done(null, false, { message: "Invalid response from API" });
+      }
+
+      return done(null, { id: data.user.id, email: data.user.email });
+
     } catch (err) {
-      console.error("Passport: Error during authentication:", err);
+      console.error("Passport Debug: Error during authentication:", err);
       return done(err);
     }
   })
 );
 
-// ✅ Serialize User (Save only user ID in session)
+
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
-// ✅ Deserialize User (Fetch owner details from API)
 passport.deserializeUser(async (id, done) => {
   try {
     const response = await fetch(`http://localhost:3001/api/owners/${id}`);
     const user = await response.json();
-
-    if (!response.ok) {
+    if (!response.ok || !user || !user.id) {
       return done(new Error("User not found"));
     }
-
     done(null, user);
   } catch (err) {
+    console.error("Passport: Error during deserialization:", err);
     done(err);
   }
 });
