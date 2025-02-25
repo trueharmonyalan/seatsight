@@ -70,7 +70,7 @@ import com.example.seatsight.ui.theme.SeatsightTheme
                                 modifier = Modifier.padding(bottom = 18.dp)
                                     .padding(start = 10.dp))
 
-                            displayListMenu(hotelDetail = hotels)
+//                            DisplaylistofAvailableHotels(hotelDetail = hotels, onHotelSelected = {})
                         }
                     }
 
