@@ -1,71 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/css/styles.css">
     <title>Seatsight Register</title>
 </head>
-
 <body>
     <%- include("partials/header.ejs") %>
 
-        <div class="center-it ">
+    <div class="center-it">
+        <div class="get-started-ui-register-login element-centering">
+            <div>
+                <h2 class="get-started-ui-text-color">Welcome to Seatsight</h2>
+                <form action="/register" method="POST">
+                    <h3 class="get-started-ui-text-color-bold">Register</h3>
+                    
+                    <!-- ✅ Restaurant Name Field -->
+                    <div class="mb-3">
+                        <label for="restaurantName" class="get-started-ui-text-color">Restaurant Name</label>
+                        <input type="text" class="form-control" id="restaurantName" name="restaurantName" required>
+                    </div>
 
-            <div class="get-started-ui-register-login element-centering">
-                <div>
-                    <h2 class="get-started-ui-text-color">
-                        Welcome to Seatsight
-                    </h2>
+                    <div class="mb-3">
+                        <label for="exampleInputEmail1" class="get-started-ui-text-color">Email</label>
+                        <input type="email" class="form-control" id="exampleInputEmail1" name="username" required>
+                    </div>
 
-                    <form action="/register" method="POST">
-                        <h3 class="get-started-ui-text-color-bold">Register</h3>
-                        <div class="mb-3">
-                            <label for="exampleInputEmail1" class="get-started-ui-text-color">Email</label>
-                            <input type="email" class="form-control" id="exampleInputEmail1"
-                                aria-describedby="emailHelp" name="username">
-                        </div>
-                        <div class="mb-3">
-                            <label for="exampleInputPassword1" class="get-started-ui-text-color">Password</label>
-                            <input type="password" class="form-control" id="exampleInputPassword1" name="password">
-                        </div>
+                    <div class="mb-3">
+                        <label for="exampleInputPassword1" class="get-started-ui-text-color">Password</label>
+                        <input type="password" class="form-control" id="exampleInputPassword1" name="password" required>
+                    </div>
 
-                        <button type="submit" class="btn btn-primary">done</button>
+                    <button type="submit" class="btn btn-primary">Done</button>
+                </form>
 
-                    </form>
-
-
-                
-                <% if(locals.potentialError) {%>
-
-                    <% if(potentialError.noemailError){ %>
-                        <label for="exampleInputEmail1" style="color: #E52020;">
-                            <%= potentialError.noemailError %>
-                        </label>
-                        <% } %>
-                            <% if(potentialError.emailError){ %>
-                                <label for="exampleInputEmail1" style="color: #E52020;">
-                                    <%= potentialError.emailError %>
-                                </label>
-                                <% } %>
-
-                                    <% if(potentialError.noPasswordError){ %>
-                                        <label for="exampleInputEmail1" style="color: #E52020;">
-                                            <%= potentialError.noPasswordError %>
-                                        </label>
-                                        <% } %>
-
-                                            <% } %>
-                                        </div>
+                <% if (locals.potentialError) { %>
+                    <% if (potentialError.noRestaurantName) { %>
+                        <label style="color: #E52020;"><%= potentialError.noRestaurantName %></label>
+                    <% } %>
+                    <% if (potentialError.noemailError) { %>
+                        <label style="color: #E52020;"><%= potentialError.noemailError %></label>
+                    <% } %>
+                    <% if (potentialError.emailError) { %>
+                        <label style="color: #E52020;"><%= potentialError.emailError %></label>
+                    <% } %>
+                    <% if (potentialError.noPasswordError) { %>
+                        <label style="color: #E52020;"><%= potentialError.noPasswordError %></label>
+                    <% } %>
+                <% } %>
             </div>
-
         </div>
+    </div>
 
-        </div>
-
-
-        <%- include("partials/footer.ejs") %>
+    <%- include("partials/footer.ejs") %>
 </body>
-
 </html>
