@@ -15,12 +15,12 @@ import "./config/database.js";
 import passport from "./config/passport.js";
 
 
-// Import API routes
-import ownerRoutes from "./routes/api/owners.js";
-import restaurantRoutes from "./routes/api/restaurants.js";
-import menuRoutes from "./routes/api/menu.js";
-import seatRoutes from "./routes/api/seats.js";
-import customerRoutes from "./routes/api/customers.js";
+// // Import API routes
+// import ownerRoutes from "./routes/api/owners.js";
+// import restaurantRoutes from "./routes/api/restaurants.js";
+// import menuRoutes from "./routes/api/menu.js";
+// import seatRoutes from "./routes/api/seats.js";
+// import customerRoutes from "./routes/api/customers.js";
 
 
 
@@ -58,12 +58,7 @@ app.use("/",bookedSeats)
 app.use("/",updateMenu)
 
 
-//API routes for web app
-app.use("/api/owners", ownerRoutes);
-app.use("/api/restaurants", restaurantRoutes);
-app.use("/api/menu", menuRoutes);
-app.use("/api/seats", seatRoutes);
-app.use("/api/customers", customerRoutes);
+
 
 
 

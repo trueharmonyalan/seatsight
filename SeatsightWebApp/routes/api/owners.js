@@ -22,11 +22,12 @@ router.post("/register", async (req, res) => {
 });
 
 // ✅ Login Owner
+// ✅ Login Owner API
 router.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const result = await db.query("SELECT * FROM owners WHERE email = $1", [email]);
+        const result = await db.query("SELECT id, email, password FROM owners WHERE email = $1", [email]);
 
         if (result.rows.length === 0) {
             return res.status(401).json({ error: "User not found" });
@@ -35,13 +36,35 @@ router.post("/login", async (req, res) => {
         const owner = result.rows[0];
 
         if (await argon2.verify(owner.password, password)) {
-            res.json({ message: "Login successful", owner_id: owner.id, email: owner.email });
+            return res.json({
+                message: "Login successful",
+                owner_id: owner.id,
+                email: owner.email
+            });
         } else {
-            res.status(401).json({ error: "Invalid credentials" });
+            return res.status(401).json({ error: "Invalid credentials" });
         }
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Login failed" });
+        return res.status(500).json({ error: "Login failed" });
+    }
+});
+
+
+router.get("/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await db.query("SELECT id, email FROM owners WHERE id = $1", [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Owner not found" });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Database error" });
     }
 });
 

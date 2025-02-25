@@ -36,23 +36,28 @@
                     </form>
 
 
-                </div>
-                <% if(locals.potentialError){ %>
-                    <label for="exampleInputEmail1" style="color: #E52020;">
-                        <%= potentialError.noemailError %>
-                    </label>
-                    <% } %>
-                        <% if(locals.potentialError){ %>
-                            <label for="exampleInputEmail1" style="color: #E52020;">
-                                <%= potentialError.emailError %>
-                            </label>
-                            <% } %>
+                
+                <% if(locals.potentialError) {%>
 
-                                <% if(locals.potentialError){ %>
-                                    <label for="exampleInputEmail1" style="color: #E52020;">
-                                        <%= potentialError.noPasswordError %>
-                                    </label>
-                                    <% } %>
+                    <% if(potentialError.noemailError){ %>
+                        <label for="exampleInputEmail1" style="color: #E52020;">
+                            <%= potentialError.noemailError %>
+                        </label>
+                        <% } %>
+                            <% if(potentialError.emailError){ %>
+                                <label for="exampleInputEmail1" style="color: #E52020;">
+                                    <%= potentialError.emailError %>
+                                </label>
+                                <% } %>
+
+                                    <% if(potentialError.noPasswordError){ %>
+                                        <label for="exampleInputEmail1" style="color: #E52020;">
+                                            <%= potentialError.noPasswordError %>
+                                        </label>
+                                        <% } %>
+
+                                            <% } %>
+                                        </div>
             </div>
 
         </div>
