@@ -20,8 +20,9 @@ data class RegisterResponse(
 
 // ✅ Model for API Response When Logging In
 data class LoginResponse(
-    val message: String,
-    val user: UserData
+    val id: Int,
+    val email: String,
+    val token: String
 )
 
 // ✅ User Data Model
