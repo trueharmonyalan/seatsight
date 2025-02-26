@@ -6,39 +6,50 @@ const router = express.Router();
 router.use(express.json());
 
 router.post("/register", async (req, res) => {
-    const { restaurantName, email, password } = req.body;
+    const { email, password, restaurant_name } = req.body;  // ✅ Ensure consistency
 
-    if (!restaurantName || !email || !password) {
-        return res.status(400).json({ error: "Missing restaurant name, email, or password" });
+    if (!email || !password || !restaurant_name) {
+        return res.status(400).json({ error: "Email, password, and restaurant name are required." });
     }
 
     try {
-        const hashedPassword = await argon2.hash(password);
+        await db.query("BEGIN");  // ✅ Start transaction
 
-        // ✅ Insert owner into users table
-        const userResult = await db.query(
-            "INSERT INTO users (email, password, role) VALUES ($1, $2, 'owner') RETURNING id, email, role",
+        // ✅ Hash password and insert owner
+        const hashedPassword = await argon2.hash(password);
+        const ownerResult = await db.query(
+            "INSERT INTO users (email, password, role) VALUES ($1, $2, 'owner') RETURNING id, email",
             [email, hashedPassword]
         );
-        const owner = userResult.rows[0];
 
-        // ✅ Insert restaurant linked to this owner
+        const ownerId = ownerResult.rows[0].id;
+
+        // ✅ Insert restaurant for the owner
         const restaurantResult = await db.query(
             "INSERT INTO restaurants (owner_id, name) VALUES ($1, $2) RETURNING id, name",
-            [owner.id, restaurantName]
+            [ownerId, restaurant_name]
         );
 
+        await db.query("COMMIT");  // ✅ Commit transaction
+
+        console.log("✅ Owner and Restaurant Registered:", {
+            user: ownerResult.rows[0],
+            restaurant: restaurantResult.rows[0],
+        });
+
         res.json({
-            message: "Owner and restaurant registered successfully",
-            user: owner,
-            restaurant: restaurantResult.rows[0]
+            message: "Owner registered successfully",
+            user: ownerResult.rows[0],
+            restaurant: restaurantResult.rows[0],
         });
 
     } catch (err) {
-        console.error("Registration Error:", err);
+        await db.query("ROLLBACK");  // ❌ Rollback if an error occurs
+        console.error("❌ Registration Error:", err);
         res.status(500).json({ error: "Registration failed" });
     }
 });
+
 router.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
@@ -99,5 +110,9 @@ router.get("/:id", async (req, res) => {
         res.status(500).json({ error: "Database error" });
     }
 });
+
+
+
+
 
 export default router;

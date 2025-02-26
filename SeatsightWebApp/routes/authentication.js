@@ -22,9 +22,9 @@ router.get("/logout", (req, res) => {
 });
 
 router.post("/register", async (req, res) => {
-  const { restaurantName, username: email, password } = req.body;
+  const { restaurant_name, username: email, password } = req.body;
 
-  if (!restaurantName) {
+  if (!restaurant_name) {
       return res.render("register.ejs", {
           potentialError: { noRestaurantName: "Enter restaurant name." },
           year: currentYear
@@ -49,42 +49,38 @@ router.post("/register", async (req, res) => {
       const response = await fetch("http://localhost:3001/api/owners/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ restaurantName, email, password }),
+          body: JSON.stringify({ restaurant_name, email, password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-          req.login(data.user, (err) => {
-              if (err) {
-                  console.error("Auth: Error during session login:", err);
-                  return res.render("register.ejs", {
-                      potentialError: { emailError: "Registration successful, but auto-login failed. Please log in manually." },
-                      year: currentYear
-                  });
-              }
-              console.log("Auth: Registration successful. Redirecting to /auth");
-              res.redirect("/auth");
-          });
-      } else if (response.status === 409) {
-          res.render("register.ejs", {
-              potentialError: { emailError: "This email is already registered. Please log in instead." },
-              year: currentYear
-          });
-      } else {
-          res.render("register.ejs", {
-              potentialError: { emailError: data.error || "Registration failed." },
-              year: currentYear
-          });
-      }
-  } catch (err) {
-      console.error("Registration Error:", err);
-      res.render("register.ejs", {
-          potentialError: { emailError: "Server error. Try again later." },
-          year: currentYear
-      });
-  }
+        req.login(data.user, (err) => {
+            if (err) {
+                console.error("Auth: Error during session login:", err);
+                return res.render("register.ejs", {
+                    potentialError: { emailError: "Registration successful, but auto-login failed. Please log in manually." },
+                    year: currentYear
+                });
+            }
+            console.log("Auth: Registration successful. Redirecting to /auth");
+            res.redirect("/auth");
+        });
+    } else {
+        res.render("register.ejs", {
+            potentialError: { emailError: data.error || "Registration failed." },
+            year: currentYear
+        });
+    }
+} catch (err) {
+    console.error("Registration Error:", err);
+    res.render("register.ejs", {
+        potentialError: { emailError: "Server error. Try again later." },
+        year: currentYear
+    });
+}
 });
+
 router.post("/login", (req, res, next) => {
   passport.authenticate("local", (err, user, info) => {
     console.log("Auth Debug: Passport returned ->", { err, user, info });
