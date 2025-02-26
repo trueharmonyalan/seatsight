@@ -61,4 +61,5 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose.v253)
+    implementation("androidx.compose.foundation:foundation:1.7.8")
 }

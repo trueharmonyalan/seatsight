@@ -1,10 +1,12 @@
 package com.example.seatsight.UI
 
+import HotelViewModel
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -16,6 +18,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,8 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.example.seatsight.data.HotelDetails
+import com.example.seatsight.data.model.HotelResponse
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 //hotel's name and description is maintained here
@@ -104,18 +107,17 @@ fun DisplaylistofAvailableHotels(
     }
 }
 
-
 @Composable
 fun listMenuForHome(
     modifier: Modifier = Modifier,
-    hotel: HotelDetails,
+    hotel: HotelResponse,
 ) {
     val menuButtonColor = Color(android.graphics.Color.parseColor("#BB0000"))
     val menuTextColor = Color(android.graphics.Color.parseColor("#EFEFEF"))
     val menuContainerColor = Color(android.graphics.Color.parseColor("#F0EBEB"))
 
     var expandMenuButton by remember { mutableStateOf(false) }
-    val expandMenuPadding by animateDpAsState(if (expandMenuButton) 50.dp else 0.dp)
+    val expandMenuPadding by animateDpAsState(targetValue = if (expandMenuButton) 50.dp else 0.dp)
 
     Surface(
         modifier = modifier.padding(vertical = 10.dp, horizontal = 10.dp),
@@ -136,17 +138,12 @@ fun listMenuForHome(
                     modifier = Modifier.weight(0.5f)
                 ) {
                     Text(
-                        text = hotel.name,
+                        text = hotel.hotel_name, // ✅ Correct property name
                         modifier = Modifier
                             .padding(vertical = 5.dp, horizontal = 0.dp)
                             .padding(start = 8.dp),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = hotel.description,
-                        modifier = Modifier.padding(start = 8.dp),
-                        fontSize = 14.sp
                     )
                 }
                 Button(
@@ -161,12 +158,11 @@ fun listMenuForHome(
                 }
             }
 
-            // Expanded content: Show menu items when button is clicked
             if (expandMenuButton) {
                 Column(modifier = Modifier.padding(start = 8.dp, top = 8.dp)) {
-                    hotel.menuItems.forEach { menuItem ->
+                    hotel.menu.forEach { menuItem ->
                         Text(
-                            text = "• $menuItem",
+                            text = "• ${menuItem.name} - ₹${menuItem.price}",
                             fontSize = 14.sp,
                             modifier = Modifier.padding(vertical = 2.dp)
                         )
@@ -177,16 +173,31 @@ fun listMenuForHome(
     }
 }
 
+
+
+//@Composable
+//fun displayListMenuForHome(
+//    modifier: Modifier = Modifier,
+//    hotelDetail: List<HotelDetails>
+//) {
+//    LazyColumn(
+//        modifier = modifier.padding(horizontal = 0.dp)
+//    ) {
+//        items(items = hotelDetail) { hotel ->
+//            listMenuForHome(hotel = hotel) // Uses the version without seat booking
+//        }
+//    }
+//}
 @Composable
 fun displayListMenuForHome(
     modifier: Modifier = Modifier,
-    hotelDetail: List<HotelDetails>
+    hotelDetail: List<HotelResponse> // ✅ Properly receives hotel list
 ) {
     LazyColumn(
-        modifier = modifier.padding(horizontal = 0.dp)
+        modifier = Modifier.padding(horizontal = 0.dp)
     ) {
-        items(items = hotelDetail) { hotel ->
-            listMenuForHome(hotel = hotel) // Uses the version without seat booking
+        items(hotelDetail) { hotel ->
+            listMenuForHome(hotel = hotel)
         }
     }
 }

@@ -78,5 +78,24 @@ router.post("/update-ip-url", async (req, res) => {
     }
 });
 
+// ✅ Fetch Hotel Names & Their Menu Items (For Android App)
+router.get("/android/hotels-menu", async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT r.id AS restaurant_id, r.name AS hotel_name, 
+                   json_agg(json_build_object('id', m.id, 'name', m.name, 'price', m.price)) AS menu
+            FROM restaurants r
+            LEFT JOIN menu_items m ON r.id = m.restaurant_id
+            GROUP BY r.id
+            ORDER BY r.name;
+        `);
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Database Error:", err);
+        res.status(500).json({ error: "Failed to fetch hotels and menu data." });
+    }
+});
+
 
 export default router;
