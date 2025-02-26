@@ -1,77 +1,120 @@
 import express from "express";
-import db from "../config/database.js";
+import fetch from "node-fetch";
 
 const router = express.Router();
 const currentYear = new Date().getFullYear();
-// Authentication middleware
-// new
+
+// ✅ Authentication middleware
 const ensureAuthenticated = (req, res, next) => {
     if (req.isAuthenticated()) return next();
     res.redirect("/");
 };
-router.use(express.json())
-// Get menu page
-router.get("/menu", ensureAuthenticated, (req, res) => {
-    console.log("User ID:", req.user.id);  // Now logs before rendering
-    res.render("update-menu.ejs",{ year: currentYear });
-});
 
-// Fetch items
-router.get('/fetch-items', ensureAuthenticated, async (req, res) => {
+router.use(express.json());
+
+// ✅ Get menu update page (Load everything in backend)
+router.get("/menu", ensureAuthenticated, async (req, res) => {
     try {
-        const result = await db.query(
-            'SELECT id, name, description FROM items WHERE user_id = $1',
-            [req.user.id]
-        );
-        res.json(result.rows);
+        console.log("🔹 User ID:", req.user.id);
+
+        // ✅ Fetch restaurant details from API
+        const response = await fetch(`http://localhost:3001/api/restaurants/owner/${req.user.id}`);
+        const restaurantData = await response.json();
+
+        if (!response.ok || !restaurantData.id) {
+            console.error("❌ No restaurant found for owner:", req.user.id);
+            return res.render("update-menu.ejs", {
+                year: currentYear,
+                user: req.user,
+                restaurant: null,
+                menuItems: [],
+                error: "No restaurant found. Please register your restaurant first.",
+            });
+        }
+
+        const restaurant = restaurantData;
+        console.log("✅ Restaurant Found:", restaurant);
+
+        // ✅ Fetch menu items
+        const menuResponse = await fetch(`http://localhost:3001/api/menu/${restaurant.id}`);
+        const menuItems = await menuResponse.json();
+
+        if (!menuResponse.ok) {
+            console.error("❌ Failed to fetch menu items.");
+            return res.render("update-menu.ejs", {
+                year: currentYear,
+                user: req.user,
+                restaurant,
+                menuItems: [],
+                error: "Failed to load menu items.",
+            });
+        }
+
+        console.log("✅ Menu Items Found:", menuItems);
+
+        // ✅ Send data directly to frontend
+        res.render("update-menu.ejs", {
+            year: currentYear,
+            user: req.user,
+            restaurant,
+            menuItems,
+            error: null
+        });
+
     } catch (error) {
-        console.error("Fetch Error:", error);
-        res.status(500).json({ message: 'Error fetching items' });
+        console.error("❌ Menu Fetch Error:", error);
+        res.render("update-menu.ejs", {
+            year: currentYear,
+            user: req.user,
+            restaurant: null,
+            menuItems: [],
+            error: "An unexpected error occurred.",
+        });
     }
 });
 
-// Handle adding, updating, and removing items
-router.post('/submit-items', ensureAuthenticated, async (req, res) => {
-    console.log("Received body:", req.body);  
+// ✅ Submit menu updates from frontend (POST)
+router.post("/submit-items", ensureAuthenticated, async (req, res) => {
+    console.log("🔹 Received menu update request:", req.body);
 
     const { items, removedItems } = req.body;
-    
-    if (!Array.isArray(items)) {
-        return res.status(400).json({ message: "Invalid data: 'items' should be an array." });
-    }
-
-    const userId = req.user.id;
 
     try {
-        await db.query("BEGIN");
+        // ✅ Get restaurant ID for owner
+        const response = await fetch(`http://localhost:3001/api/restaurants/owner/${req.user.id}`);
+        const restaurantData = await response.json();
 
-        if (removedItems?.length > 0) {
-            await db.query('DELETE FROM items WHERE user_id = $1 AND id = ANY($2)', [userId, removedItems]);
+        if (!response.ok || !restaurantData.id) {
+            return res.status(404).json({ message: "No restaurant found for this owner." });
         }
 
-        for (const item of items) {
-            if (item.id) {
-                await db.query(
-                    'UPDATE items SET name = $1, description = $2 WHERE id = $3 AND user_id = $4',
-                    [item.name, item.description, item.id, userId]
-                );
-            } else {
-                const insertResult = await db.query(
-                    'INSERT INTO items (user_id, name, description) VALUES ($1, $2, $3) RETURNING id',
-                    [userId, item.name, item.description]
-                );
-            }
+        const restaurantId = restaurantData.id;
+
+        // ✅ Send updates to API
+        const apiResponse = await fetch("http://localhost:3001/api/menu/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                owner_id: req.user.id,
+                restaurant_id: restaurantId,
+                items,
+                removedItems,
+            }),
+        });
+
+        const result = await apiResponse.json();
+
+        if (!apiResponse.ok) {
+            return res.status(apiResponse.status).json(result);
         }
 
-        await db.query("COMMIT");
+        console.log("✅ Menu updated successfully!");
         res.json({ message: "Menu updated successfully!" });
 
     } catch (error) {
-        await db.query("ROLLBACK");
-        console.error("Submit Error:", error);
-        res.status(500).json({ message: "Error updating menu" });
+        console.error("❌ Submit Error:", error);
+        res.status(500).json({ message: "Error updating menu." });
     }
 });
-
 
 export default router;
