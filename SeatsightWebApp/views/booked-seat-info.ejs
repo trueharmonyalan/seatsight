@@ -3,34 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/css/styles.css">
-    <title>Booked seat info</title>
+    <title>Settings</title>
+    <link rel="stylesheet" href="/css/styles.css"> 
 </head>
 <body>
     <%- include("partials/header.ejs") %>
-    <% if(locals.info){ %>
-        
-    <div class="center-it-booked-info">
-        <div class="get-started-ui-booked-info">
-            <h3>Booked seats are:<%= info.bookedSeats%>/<%= info.totalSeats %></h3>
-            <div class="center-it-button">
-                <a href="/auth" class="btn btn-primary">Back</a>
+
+    <div class="custom-design-settings-active">
+        <div class="settings-card-active">
+            <div class="element-centering">
+                <h2 class="get-started-ui-text-color-bold">IP Camera Settings</h2>
+
+                <% if (info.showFromUrlState) { %>
+                    <!-- ✅ Fixed Image Layout -->
+                    <div class="video-container">
+                        <img src="<%= info.showUrl %>" alt="IP Camera Feed">
+                    </div>
+
+                    <p class="get-started-ui-text-color">Current URL:</p>
+                    <p class="settings-url"><%- info.showUrl %></p>
+
+                    <form method="POST" action="/settings">
+                        <div class="mb-3">
+                            <label for="ipurl" class="get-started-ui-text-color-bold">Update IP Camera URL:</label>
+                            <input type="url" class="form-control" id="ipurl" name="ipurl" value="<%= info.showUrl %>" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update</button>
+                    </form>
+
+                <% } else { %>
+                    <p class="get-started-ui-text-color">No IP Camera URL found. Please add one below.</p>
+
+                    <form method="POST" action="/settings">
+                        <div class="mb-3">
+                            <label for="ipurl" class="get-started-ui-text-color-bold">Enter IP Camera URL:</label>
+                            <input type="url" class="form-control" id="ipurl" name="ipurl" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </form>
+                <% } %>
+
+                <div class="center-it-button-ip-cam">
+                    <a href="/settings" class="btn btn-secondary">Back</a>
+                    <a href="/auth" class="btn btn-primary">Done</a>
+                </div>
             </div>
         </div>
     </div>
-    <% }else{ %>
-        <div class="center-it-booked-info">
-            <div class="get-started-ui-booked-info">
-                <h3>No bookings yet.</h3>
-                <div class="center-it-button">
-                    <a href="/auth" class="btn btn-primary">Back</a>
-                </div>
-            </div>
-            
-        </div>
-        <% } %>
 
-
-    <%- include("partials/footer.ejs")  %>    
+    <%- include("partials/footer.ejs") %>
 </body>
 </html>

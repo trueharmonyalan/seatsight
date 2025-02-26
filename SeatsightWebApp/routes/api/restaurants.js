@@ -30,27 +30,53 @@ router.post("/", async (req, res) => {
     }
 });
 
-// ✅ Fetch Restaurant by Owner ID (Fix JSON Response)
+// ✅ Fetch Restaurant Details Including IP Camera URL
 router.get("/owner/:owner_id", async (req, res) => {
     const { owner_id } = req.params;
 
     try {
         const result = await db.query(
-            "SELECT id, name FROM restaurants WHERE owner_id = $1",
+            "SELECT id, name, ip_camera_url FROM restaurants WHERE owner_id = $1",
             [owner_id]
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: "No restaurant found for this owner." });  // ✅ Correct JSON response
+            return res.status(404).json({ error: "No restaurant found for this owner." });
         }
 
-        res.json(result.rows[0]);  // ✅ Always return a JSON object
-    } catch (err) {
-        console.error("Database error:", err);
-        res.status(500).json({ error: "Database error" });
+        res.json(result.rows[0]);
+
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Failed to fetch restaurant data." });
     }
 });
 
+// ✅ Update IP Camera URL
+router.post("/update-ip-url", async (req, res) => {
+    const { owner_id, ip_camera_url } = req.body;
+
+    if (!owner_id || ip_camera_url === undefined) {
+        return res.status(400).json({ error: "Invalid request: Missing required fields." });
+    }
+
+    try {
+        const updateRes = await db.query(
+            "UPDATE restaurants SET ip_camera_url = $1 WHERE owner_id = $2 RETURNING ip_camera_url",
+            [ip_camera_url, owner_id]
+        );
+
+        if (updateRes.rowCount === 0) {
+            return res.status(404).json({ error: "Restaurant not found." });
+        }
+
+        res.json({ message: "IP Camera URL updated successfully!", ip_camera_url });
+
+    } catch (error) {
+        console.error("Database Update Error:", error);
+        res.status(500).json({ error: "Failed to update IP Camera URL." });
+    }
+});
 
 
 export default router;

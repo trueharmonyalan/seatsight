@@ -385,6 +385,50 @@ button[type="submit"] {
   color: white;
   border-radius: 5px;
 }
+.video-container {
+  width: 100%; /* ✅ Make it responsive */
+  max-width: 720px; /* ✅ Prevent it from getting too large */
+  height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden; /* ✅ Prevents layout shift */
+  background-color: #000; /* ✅ Placeholder background */
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.video-container img {
+  max-width: 100%; /* ✅ Fit within the container */
+  height: auto;
+  object-fit: contain; /* ✅ Maintain aspect ratio */
+  border-radius: 8px;
+}
+
+.settings-url {
+  display: block;
+  word-wrap: break-word; /* ✅ Wrap long URLs properly */
+  max-width: 100%;
+  overflow-wrap: break-word;
+  text-align: center;
+  font-size: 14px;
+  color: #302F2F;
+  padding: 5px;
+}
+
+.capacity-update {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.center-it-button-ip-cam {
+  display: flex;
+  justify-content: center;
+  gap: 10px; /* ✅ Space between buttons */
+  margin-top: 15px;
+}
 
 
 
