@@ -64,6 +64,6 @@ app.use("/",updateMenu)
 
 
 
-app.listen(port, "0.0.0.0", ()=>{
+app.listen(port,()=>{
     console.log(`server is running on port ${port}`)
 })
