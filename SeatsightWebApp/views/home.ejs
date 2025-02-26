@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/styles.css">
+  <title>SeatSigh pannel</title>
+</head>
+
+<body>
+  <%- include("partials/header.ejs") %>
+    <div class="center-it-home">
+
+      <div class="card" style="width: 18rem;">
+        <img src="./img/updatemenu.png" class="card-img-top" alt="...">
+        <div class="card-body">
+          <h5 class="card-title">Update menu</h5>
+          <p class="card-text">Customize your menu</p>
+          <a href="/menu" class="btn btn-primary">Go</a>
+        </div>
+      </div>
+
+      <div class="card" style="width: 18rem;">
+        <img src="./img/updatemenu.png" class="card-img-top" alt="...">
+        <div class="card-body">
+          <h5 class="card-title">Booked seats</h5>
+          <p class="card-text">See your seat booked information.</p>
+          <a href="/bookedInfo" class="btn btn-primary">Go</a>
+        </div>
+      </div>
+
+      <div class="card" style="width: 18rem;">
+        <img src="./img/updatemenu.png" class="card-img-top" alt="...">
+        <div class="card-body">
+          <h5 class="card-title">Settings</h5>
+          <p class="card-text">IP-Camera configuration</p>
+          <a href="/settings" class="btn btn-primary">Go</a>
+        </div>
+      </div>
+
+    </div>
+    <%- include("partials/footer.ejs") %>
+</body>
+
+</html>

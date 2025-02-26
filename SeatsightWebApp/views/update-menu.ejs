@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update Menu</title>
+</head>
+<body>
+    <%- include("partials/header.ejs") %>
+
+    <div class="container">
+        <h2 style="color: #D9D9D9;">Menu Items</h2>
+
+        <% if (!restaurant) { %>
+            <p style="color: red;">No restaurant found. Please register your restaurant.</p>
+        <% } else { %>
+
+        <form id="itemForm">
+            <div id="itemContainer">
+                <% if (menuItems.length === 0) { %>
+                    <p id="noItemsMessage" style="color: #D9D9D9;">No menu items found. Add new items.</p>
+                <% } else { %>
+                    <% menuItems.forEach(item => { %>
+                        <div class="item" data-id="<%= item.id %>">
+                            <input type="text" value="<%= item.name %>" required>
+                            <textarea required><%= item.description %></textarea>
+                            <input type="number" value="<%= item.price %>" step="0.01" required>
+                            <button type="button" onclick="toggleEdit(this)" class="btn btn-dark">Done</button>
+                            <button type="button" onclick="removeItem(this)" class="btn btn-danger">Remove</button>
+                        </div>
+                    <% }); %>
+                <% } %>
+            </div>
+
+            <div id="buttonContainer">
+                <button type="button" onclick="addItem()" id="addItemBtn" class="btn btn-light">Add Item</button>
+                <button type="button" onclick="window.location.href='/auth'" id="backBtn" class="btn btn-light">Back</button>
+                <input type="submit" id="submitBtn" class="btn btn-primary" value="Save Changes">
+            </div>
+        </form>
+        <div id="message"></div>
+
+        <% } %>
+    </div>
+
+    <%- include("partials/footer.ejs") %>
+
+    <script>
+        let removedItems = [];
+        let ownerId = "<%= user.id %>";
+        let restaurantId = "<%= restaurant.id %>";
+
+        function addItem() {
+            const container = document.getElementById("itemContainer");
+            const noItemsMessage = document.getElementById("noItemsMessage");
+
+            if (noItemsMessage) {
+                noItemsMessage.style.display = "none";
+            }
+
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "item";
+            itemDiv.dataset.id = "";
+
+            itemDiv.innerHTML = `
+                <input type="text" placeholder="Item Name" required>
+                <textarea placeholder="Item Description" required></textarea>
+                <input type="number" placeholder="Price" step="0.01" required>
+                <button type="button" onclick="toggleEdit(this)" class="btn btn-dark">Done</button>
+                <button type="button" onclick="removeItem(this)" class="btn btn-danger">Remove</button>
+            `;
+
+            container.appendChild(itemDiv);
+        }
+
+        function toggleEdit(button) {
+            const item = button.closest(".item");
+            const inputs = item.querySelectorAll("input, textarea");
+
+            if (inputs[0].disabled) {
+                inputs.forEach(input => input.disabled = false);
+                button.textContent = "Save";
+            } else {
+                if (!inputs[0].value.trim() || !inputs[1].value.trim() || isNaN(inputs[2].value) || inputs[2].value <= 0) {
+                    alert("Please fill in all fields correctly.");
+                    return;
+                }
+                inputs.forEach(input => input.disabled = true);
+                button.textContent = "Edit";
+            }
+        }
+
+        function removeItem(button) {
+            const item = button.closest(".item");
+            const id = item.dataset.id;
+            if (id) removedItems.push(id);
+            item.remove();
+        }
+
+        document.getElementById("itemForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const items = Array.from(document.querySelectorAll(".item")).map(item => ({
+                id: item.dataset.id || null,
+                name: item.querySelector('input[type="text"]').value.trim(),
+                description: item.querySelector("textarea").value.trim(),
+                price: parseFloat(item.querySelector('input[type="number"]').value),
+            }));
+
+            const response = await fetch("/submit-items", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ owner_id: ownerId, restaurant_id: restaurantId, items, removedItems }),
+            });
+
+            const result = await response.json();
+            showMessage(result.message);
+            removedItems = [];
+            setTimeout(() => window.location.reload(), 1000);
+        });
+
+        function showMessage(text) {
+            const div = document.getElementById("message");
+            div.textContent = text;
+            setTimeout(() => div.textContent = "", 3000);
+        }
+    </script>
+</body>
+</html>

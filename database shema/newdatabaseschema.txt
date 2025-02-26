@@ -1,0 +1,263 @@
+-- 1️⃣ Owners Table (For Web App)
+CREATE TABLE owners (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 2️⃣ Customers Table (For Android App)
+CREATE TABLE customers (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 3️⃣ Restaurants Table (Managed by Owners)
+CREATE TABLE restaurants (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER REFERENCES owners(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    address TEXT NOT NULL,
+    ip_camera_url TEXT DEFAULT NULL
+);
+
+-- 4️⃣ Menu Items Table (Restaurant Menu)
+CREATE TABLE menu_items (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    price DECIMAL(10,2) NOT NULL
+);
+
+-- 5️⃣ Seats Table (Real-time updates from Deep Learning)
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    position_x FLOAT NOT NULL,
+    position_y FLOAT NOT NULL,
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied')) NOT NULL DEFAULT 'vacant'
+);
+
+-- 6️⃣ Reservations Table (For Bookings by Customers)
+CREATE TABLE reservations (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    status VARCHAR(20) CHECK (status IN ('pending', 'confirmed', 'canceled')) NOT NULL DEFAULT 'pending',
+    timestamp TIMESTAMP DEFAULT NOW()
+);
+
+-- 7️⃣ Live Seat Status Table (Updated by Deep Learning Model)
+CREATE TABLE seat_status (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied')) NOT NULL
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// in use schema
+
+-- ✅ Users Table (No Change)
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role VARCHAR(10) CHECK (role IN ('owner', 'customer')) NOT NULL
+);
+
+-- ✅ Restaurants Table (Seating Capacity Can Be NULL Initially)
+-- ✅ Updated Restaurants Table (Added `ip_camera_url`)
+CREATE TABLE restaurants (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    seating_capacity INTEGER CHECK (seating_capacity > 0), -- ✅ Nullable initially
+    ip_camera_url TEXT DEFAULT NULL -- ✅ New column for storing the IP Camera URL
+);
+
+-- ✅ Seats Table (Updated)
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_number INTEGER NOT NULL CHECK (seat_number > 0),
+    is_booked BOOLEAN DEFAULT FALSE,
+    UNIQUE (restaurant_id, seat_number) -- ✅ Ensure unique seat numbers per restaurant
+);
+
+
+-- ✅ Seat Status Table (Future Deep Learning Model Integration)
+CREATE TABLE seat_status (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied')) NOT NULL
+);
+
+-- ✅ Bookings Table (For Reservations)
+CREATE TABLE bookings (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    booking_time TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(10) CHECK (status IN ('pending', 'confirmed', 'cancelled')) DEFAULT 'pending'
+);
+
+CREATE TABLE menu_items (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    price DECIMAL(10,2) NOT NULL
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+for seats sechema not in use
+//////////
+
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    position_x FLOAT NOT NULL,
+    position_y FLOAT NOT NULL,
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied')) NOT NULL DEFAULT 'vacant'
+);
+
+CREATE TABLE restaurants (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    ip_camera_url TEXT DEFAULT NULL
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////
+
+
+-- 1️⃣ Unified Users Table (For Both Owners & Customers)
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role VARCHAR(10) CHECK (role IN ('owner', 'customer')) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 2️⃣ Restaurants Table (Each Restaurant Linked to an Owner)
+CREATE TABLE restaurants (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    total_seats INTEGER DEFAULT 0 CHECK (total_seats >= 0) -- Owner defines seating capacity
+);
+
+-- 3️⃣ Menu Items Table (Restaurant Menu)
+CREATE TABLE menu_items (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    price DECIMAL(10,2) NOT NULL
+);
+
+-- 4️⃣ Seats Table (Real-time updates from Deep Learning)
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_number INTEGER NOT NULL CHECK (seat_number > 0),
+    is_booked BOOLEAN DEFAULT FALSE,
+    UNIQUE (restaurant_id, seat_number) -- Ensure unique seat numbers per restaurant
+);
+
+-- 5️⃣ Reservations Table (For Bookings by Customers)
+CREATE TABLE reservations (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    customer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    status VARCHAR(20) CHECK (status IN ('pending', 'confirmed', 'canceled')) NOT NULL DEFAULT 'pending',
+    timestamp TIMESTAMP DEFAULT NOW()
+);
+
+-- 6️⃣ Live Seat Status Table (Updated by Deep Learning Model)
+CREATE TABLE seat_status (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied')) NOT NULL,
+    source VARCHAR(10) CHECK (source IN ('manual', 'ai')) DEFAULT 'manual'
+);

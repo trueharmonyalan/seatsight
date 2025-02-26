@@ -1,0 +1,33 @@
+-- Table for storing users
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,               -- User identifier (primary key)
+    username VARCHAR(255) UNIQUE NOT NULL, -- Unique username for each user
+    password VARCHAR(255) NOT NULL,        -- Password for user authentication
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- When the user was created
+);
+
+-- Table for storing user profiles
+CREATE TABLE user_profiles (
+    user_id INT PRIMARY KEY,              -- Foreign key from users table
+    name VARCHAR(255) NOT NULL,            -- Name of the user (e.g., restaurant name)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Table for storing items (mapped to user)
+CREATE TABLE items (
+    id SERIAL PRIMARY KEY,                -- Item identifier (primary key)
+    user_id INT,                          -- Link to user by user_id
+    name VARCHAR(255) NOT NULL,            -- Name of the item
+    description TEXT,                     -- Item description
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- When the item was created
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+create table availableseats (
+id SERIAL PRIMARY KEY,                -- Item identifier (primary key)
+    user_id INT,                          -- Link to user by user_id
+    seats VARCHAR(255) NOT NULL,            -- Name of the item
+    description TEXT,                     -- Item description
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- When the item was created
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+)

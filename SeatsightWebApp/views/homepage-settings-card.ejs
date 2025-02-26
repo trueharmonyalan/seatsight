@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <link rel="stylesheet" href="/css/styles.css"> 
+</head>
+<body>
+    <%- include("partials/header.ejs") %>
+
+    <div class="custom-design-settings-active">
+        <div class="settings-card-active">
+            <div class="element-centering">
+                <h2 class="get-started-ui-text-color-bold">IP Camera Settings</h2>
+
+                <% if (info.showFromUrlState) { %>
+                    <!-- ✅ Fixed Image Layout -->
+                    <div class="video-container">
+                        <img src="<%= info.showUrl %>" alt="IP Camera Feed">
+                    </div>
+
+                    <p class="get-started-ui-text-color">Current URL:</p>
+                    <p class="settings-url"><%- info.showUrl %></p>
+
+                    <form method="POST" action="/settings">
+                        <div class="mb-3">
+                            <label for="ipurl" class="get-started-ui-text-color-bold">Update IP Camera URL:</label>
+                            <input type="url" class="form-control" id="ipurl" name="ipurl" value="<%= info.showUrl %>" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update</button>
+                        <a href="/auth" class="btn btn-secondary">Back</a>
+                    </form>
+
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <%- include("partials/footer.ejs") %>
+</body>
+</html>
