@@ -27,7 +27,7 @@ import passport from "./config/passport.js";
 
 env.config();
 const app = express();
-const port = process.env.APP_PORT || 3000;
+const port = process.env.APP_PORT || 3002;
 
 // session implementation
 app.use(
