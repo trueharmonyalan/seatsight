@@ -27,19 +27,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.seatsight.UI.buttonColorBook
 import com.example.seatsight.UI.surfaceColor
+import com.example.seatsight.bookingConfirmation
 
 @Composable
 fun BookingConfirmationScreen(
     hotelName: String,
     selectedSeats: Set<String>,
+    selectedMenuItems: Map<String, Int>, // ✅ Include menu selections
     modifier: Modifier = Modifier,
     onConfirm: () -> Unit = {}
 ) {
-    val background = Color(android.graphics.Color.parseColor("#D9D9D9")) // Background color
-    val containerColor = surfaceColor // Distinct container color
-    val showAlert = remember { mutableStateOf(false) } // State to track alert visibility
+    val background = Color(android.graphics.Color.parseColor("#D9D9D9"))
+    val containerColor = surfaceColor
+    val showAlert = remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier
@@ -53,8 +56,7 @@ fun BookingConfirmationScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // **Header - Confirmation Message**
+            // **Header**
             Text(
                 text = "Confirm Your Booking",
                 fontSize = 24.sp,
@@ -65,18 +67,17 @@ fun BookingConfirmationScreen(
                 textAlign = TextAlign.Center
             )
 
-            // **Container Only Wrapping Content**
+            // **Confirmation Details**
             Surface(
                 modifier = Modifier
                     .wrapContentSize()
                     .padding(horizontal = 24.dp)
-                    .clip(RoundedCornerShape(16.dp)) // Rounded Corners
+                    .clip(RoundedCornerShape(16.dp))
                     .background(containerColor),
                 color = containerColor
             ) {
                 Column(
-                    modifier = Modifier
-                        .padding(16.dp), // Padding inside container
+                    modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -86,6 +87,8 @@ fun BookingConfirmationScreen(
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
+
+                    // **Display Selected Seats**
                     Text(
                         text = "Selected Seats: ${selectedSeats.joinToString(", ")}",
                         fontSize = 18.sp,
@@ -93,10 +96,34 @@ fun BookingConfirmationScreen(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    // **Confirm Booking Button**
+                    // **Display Selected Menu Items**
+                    if (selectedMenuItems.isNotEmpty()) {
+                        Text(
+                            text = "Selected Menu Items:",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        selectedMenuItems.forEach { (item, quantity) ->
+                            Text(
+                                text = "$item x$quantity",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "No menu items selected",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = androidx.compose.ui.graphics.Color.Gray
+                        )
+                    }
+
+                    // **Confirm Button**
                     Button(
                         onClick = { showAlert.value = true },
-                        colors =ButtonDefaults.buttonColors(buttonColorBook),
+                        colors = ButtonDefaults.buttonColors(buttonColorBook),
                         modifier = Modifier
                             .height(40.dp)
                             .width(160.dp)
@@ -106,10 +133,10 @@ fun BookingConfirmationScreen(
                 }
             }
 
-            // **Alert Dialog for Confirmation**
+            // **Alert Dialog**
             if (showAlert.value) {
                 AlertDialogComponent(
-                    message = "Your seats have been confirmed. The amount will be added to your bill after dining.",
+                    message = "Your booking is confirmed. The amount will be added to your bill after dining.",
                     onDismiss = { showAlert.value = false },
                     onConfirm = {
                         showAlert.value = false
@@ -118,6 +145,42 @@ fun BookingConfirmationScreen(
                 )
             }
         }
+    }
+}
+@Composable
+fun ButtonForBookAndView(
+    selectedSeats: Set<String>,
+    selectedItems: Map<String, Int>,
+    navController: NavController,
+    hotelName: String
+) {
+    val isButtonEnabled = selectedSeats.isNotEmpty() || selectedItems.isNotEmpty()
+
+    Button(
+        onClick = {
+            val seatListString = selectedSeats.joinToString(",")
+            val menuListString = selectedItems.entries.joinToString(",") { "${it.key} x${it.value}" }
+
+            val formattedRoute = bookingConfirmation.route
+                .replace("{hotelName}", hotelName)
+                .replace("{selectedSeats}", seatListString)
+                .replace("{selectedMenu}", menuListString)
+
+            navController.navigate(formattedRoute)
+        },
+        modifier = Modifier
+            .height(50.dp)
+            .width(200.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isButtonEnabled) buttonColorBook else androidx.compose.ui.graphics.Color.Gray
+        ),
+        enabled = isButtonEnabled
+    ) {
+        Text(
+            text = "Confirm Booking",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -140,5 +203,9 @@ fun AlertDialogComponent(message: String, onDismiss: () -> Unit, onConfirm: () -
 @Preview(showBackground = true)
 @Composable
 fun PreviewBookingConfirmationScreen() {
-    BookingConfirmationScreen(selectedSeats = setOf("S1", "S3"), hotelName = "pp") // Mock selected seats
+    BookingConfirmationScreen(
+        hotelName = "Hotel Example",
+        selectedSeats = setOf("S1", "S2"),
+        selectedMenuItems = mapOf("Pasta" to 2, "Pizza" to 1)
+    )
 }

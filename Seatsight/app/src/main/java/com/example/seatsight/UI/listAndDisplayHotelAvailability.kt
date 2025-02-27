@@ -1,6 +1,7 @@
 package com.example.seatsight.UI
 
 import HotelViewModel
+import android.util.Log
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -38,7 +39,7 @@ import com.example.seatsight.data.model.HotelResponse
 @Composable
 fun listofAvailableHotels(
     hotel: HotelDetails,
-    onHotelSelected: (String) -> Unit
+    onHotelSelected: (String, Int) -> Unit
 ) {
     val buttonColor = Color(android.graphics.Color.parseColor("#BB0000"))
     val textColor = Color(android.graphics.Color.parseColor("#EFEFEF"))
@@ -74,10 +75,10 @@ fun listofAvailableHotels(
                     )
                 }
 
-                // Navigate to BookSeatScreen with the selected hotel name
                 Button(
                     onClick = {
-                        onHotelSelected(hotel.name)
+                        Log.d("listofAvailableHotels", "Clicked hotel: ${hotel.name}, ID: ${hotel.restaurantId}") // ✅ Debugging log
+                        onHotelSelected(hotel.name, hotel.restaurantId) // ✅ Ensure `restaurantId` is passed
                     },
                     colors = ButtonDefaults.buttonColors(buttonColor)
                 ) {
@@ -90,22 +91,26 @@ fun listofAvailableHotels(
 
 
 
+
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 //this composable is responsible for the display of scrollable hotel details with each hotel details
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 @Composable
 fun DisplaylistofAvailableHotels(
     hotelDetail: List<HotelDetails>,
-    onHotelSelected: (String) -> Unit
+    onHotelSelected: (String, Int) -> Unit // ✅ Pass restaurantId too
 ) {
     LazyColumn(
         modifier = Modifier.padding(horizontal = 0.dp)
     ) {
         items(items = hotelDetail) { hotel ->
-            listofAvailableHotels(hotel = hotel,onHotelSelected = onHotelSelected)
+            listofAvailableHotels(hotel = hotel, onHotelSelected = onHotelSelected)
         }
     }
 }
+
+
 
 @Composable
 fun listMenuForHome(

@@ -1,6 +1,8 @@
 package com.example.seatsight.UI
 
+import HotelViewModel
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -10,15 +12,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.seatsight.UI.viewmodel.HotelViewModelFactory
 import com.example.seatsight.bookSeatScreen
-import com.example.seatsight.data.hotels
+import com.example.seatsight.data.HotelDetails
+import com.example.seatsight.data.repository.HotelRepository
 import com.example.seatsight.ui.theme.SeatsightTheme
 
 @Composable
@@ -26,6 +35,16 @@ fun BookSeatWindow(
     navController: NavController, // Ensure NavController is passed
     modifier: Modifier = Modifier
 ) {
+    val repository = remember { HotelRepository() } // ✅ Create repository instance
+    val viewModel: HotelViewModel = viewModel(factory = HotelViewModelFactory(repository)) // ✅ Use ViewModel Factory
+
+    val hotels by viewModel.hotelList.collectAsState() // ✅ Fetch dynamic hotel list
+
+
+    LaunchedEffect(true) {
+        viewModel.fetchHotels() // ✅ Fetch real hotels
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = surfaceColor
@@ -57,13 +76,31 @@ fun BookSeatWindow(
                                     .padding(start = 10.dp)
                             )
 
+                            // ✅ Pass real hotels from API
                             DisplaylistofAvailableHotels(
-                                hotelDetail = hotels,
-                                onHotelSelected = { hotelName ->
-                                    val formattedRoute = bookSeatScreen.route.replace("{hotelName}", hotelName)
+                                hotelDetail = hotels.map { apiHotel ->
+                                    Log.d("BookSeatWindow", "Mapping hotel: ${apiHotel.hotel_name}, ID: ${apiHotel.restaurant_id}") // ✅ Debug log
+
+                                    HotelDetails(
+                                        name = apiHotel.hotel_name,
+                                        description = "Description Not Available",
+                                        menuItems = emptyList(),
+                                        restaurantId = apiHotel.restaurant_id // ✅ Ensure restaurantId is mapped
+                                    )
+                                },
+                                onHotelSelected = { hotelName, restaurantId ->
+                                    Log.d("BookSeatWindow", "Navigating to BookSeatScreen with ID: $restaurantId") // ✅ Debug log
+                                    val formattedRoute = "bookSeatScreen/${hotelName}/${restaurantId}" // ✅ Ensure proper string formatting
+
+                                    Log.d("Navigation", "Navigating to: $formattedRoute") // ✅ Debug log
                                     navController.navigate(formattedRoute)
+
+
                                 }
                             )
+
+
+
                         }
                     }
                 }
@@ -71,6 +108,7 @@ fun BookSeatWindow(
         }
     }
 }
+
 
 
 @Preview

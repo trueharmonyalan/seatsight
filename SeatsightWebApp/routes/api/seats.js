@@ -77,4 +77,52 @@ router.post("/update", async (req, res) => {
     }
 });
 
+
+
+// ✅ Fetch Seat List with Availability
+router.get("/:restaurant_id", async (req, res) => {
+    const { restaurant_id } = req.params;
+
+    try {
+        const seatResults = await db.query(
+            "SELECT id AS seatId, seat_number AS seatNumber, is_booked FROM seats WHERE restaurant_id = $1",
+            [restaurant_id]
+        );
+
+        if (seatResults.rows.length === 0) {
+            return res.status(404).json({ error: "No seats found for this restaurant." });
+        }
+
+        console.log("Returning seat data:", seatResults.rows); // ✅ Log data before sending
+        res.json(seatResults.rows);
+    } catch (error) {
+        console.error("Database Error:", error);
+        res.status(500).json({ error: "Failed to fetch seat data." });
+    }
+});
+
+router.get("/restaurant/:restaurant_id", async (req, res) => {
+    const { restaurant_id } = req.params;
+
+    try {
+        const seatResults = await db.query(
+            "SELECT id AS seatId, seat_number AS seatNumber, is_booked FROM seats WHERE restaurant_id = $1",
+            [restaurant_id]
+        );
+
+        if (seatResults.rows.length === 0) {
+            return res.status(404).json({ error: "No seats found for this restaurant." });
+        }
+
+        console.log("Returning seat data:", seatResults.rows); // ✅ Log data before sending
+        res.json(seatResults.rows);
+    } catch (error) {
+        console.error("Database Error:", error);
+        res.status(500).json({ error: "Failed to fetch seat data." });
+    }
+});
+
+
+
+
 export default router;

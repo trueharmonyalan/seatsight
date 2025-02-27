@@ -1,6 +1,7 @@
 package com.example.seatsight
 
 import BookingConfirmationScreen
+import android.util.Log
 import com.example.seatsight.UI.BookSeatWindow
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
@@ -91,14 +92,19 @@ object AvailableHotelsForBookSeat : seatSightDestinations {
 }
 
 object bookSeatScreen : dynamicseatSightDestinations {
-    override val route: String = "bookSeatScreen/{hotelName}"
+    override val route: String = "bookSeatScreen/{hotelName}/{restaurantId}" // ✅ Ensure parameter names match exactly
 
     override var screen: @Composable (Map<String, String>, NavController) -> Unit = { params, navController ->
         val hotelName = params["hotelName"] ?: ""
+        val restaurantId = params["restaurantId"]?.toIntOrNull() ?: 0 // ✅ Extract properly
+
+        Log.d("bookSeatScreen", "Raw restaurantId from params: ${params["restaurantId"]}") // ✅ Debug log
+        Log.d("bookSeatScreen", "Parsed restaurantId: $restaurantId") // ✅ Debug log
 
         BookSeatScreen(
             hotelName = hotelName,
-            navController = navController // Use the passed NavController
+            restaurantId = restaurantId, // ✅ Pass correctly
+            navController = navController
         )
     }
 }
@@ -106,18 +112,28 @@ object bookSeatScreen : dynamicseatSightDestinations {
 
 
 
+
+
+
 object bookingConfirmation : dynamicseatSightDestinations {
-    override val route: String = "bookingConfirmation/{hotelName}/{selectedSeats}"
+    override val route: String = "bookingConfirmation/{hotelName}/{selectedSeats}/{selectedMenu}"
 
     override var screen: @Composable (Map<String, String>, NavController) -> Unit = { params, navController ->
         val hotelName = params["hotelName"] ?: ""
         val selectedSeats = params["selectedSeats"]?.split(",")?.toSet() ?: emptySet()
+        val selectedMenu = params["selectedMenu"]
+            ?.split(",")
+            ?.associate {
+                val parts = it.split(" x") // Extract name and quantity
+                parts[0] to (parts.getOrNull(1)?.toIntOrNull() ?: 0)
+            } ?: emptyMap()
 
         BookingConfirmationScreen(
             hotelName = hotelName,
             selectedSeats = selectedSeats,
+            selectedMenuItems = selectedMenu, // ✅ Pass selected menu items
             onConfirm = {
-                navController.popBackStack() // Use the same NavController
+                navController.popBackStack()
             }
         )
     }

@@ -2,6 +2,7 @@ package com.example.seatsight
 
 import BookingConfirmationScreen
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -108,10 +109,27 @@ fun SeatSightApp(){
                     }
 
                 // Navigate to BookSeatScreen with dynamic hotel name
-                composable(route = bookSeatScreen.route) { backStackEntry ->
+                composable(
+                    route = "bookSeatScreen/{hotelName}/{restaurantId}", // ✅ Ensure both parameters are in route
+                    arguments = listOf(
+                        navArgument("hotelName") { type = NavType.StringType },
+                        navArgument("restaurantId") { type = NavType.IntType } // ✅ Ensure restaurantId is extracted as an Int
+                    )
+                ) { backStackEntry ->
                     val hotelName = backStackEntry.arguments?.getString("hotelName") ?: ""
-                    bookSeatScreen.screen(mapOf("hotelName" to hotelName), navController)
+                    val restaurantId = backStackEntry.arguments?.getInt("restaurantId") ?: 0 // ✅ Extract restaurantId safely
+
+                    Log.d("NavHost", "Extracted restaurantId: $restaurantId") // ✅ Debugging log
+
+                    bookSeatScreen.screen(
+                        mapOf(
+                            "hotelName" to hotelName,
+                            "restaurantId" to restaurantId.toString() // ✅ Pass restaurantId as a string
+                        ),
+                        navController
+                    )
                 }
+
 
                 // Navigate to BookingConfirmationScreen with selected seats
                 composable(route = bookingConfirmation.route) { backStackEntry ->
