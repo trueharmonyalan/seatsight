@@ -98,6 +98,7 @@ object bookSeatScreen : dynamicseatSightDestinations {
         val hotelName = params["hotelName"] ?: ""
         val restaurantId = params["restaurantId"]?.toIntOrNull() ?: 0 // ✅ Extract properly
 
+
         Log.d("bookSeatScreen", "Raw restaurantId from params: ${params["restaurantId"]}") // ✅ Debug log
         Log.d("bookSeatScreen", "Parsed restaurantId: $restaurantId") // ✅ Debug log
 
@@ -121,23 +122,29 @@ object bookingConfirmation : dynamicseatSightDestinations {
     override var screen: @Composable (Map<String, String>, NavController) -> Unit = { params, navController ->
         val hotelName = params["hotelName"] ?: ""
         val selectedSeats = params["selectedSeats"]?.split(",")?.toSet() ?: emptySet()
-        val selectedMenu = params["selectedMenu"]
-            ?.split(",")
-            ?.associate {
-                val parts = it.split(" x") // Extract name and quantity
-                parts[0] to (parts.getOrNull(1)?.toIntOrNull() ?: 0)
-            } ?: emptyMap()
+        val selectedMenuRaw = params["selectedMenu"] ?: ""
+        Log.d("Navigation", "Raw selectedMenu before parsing: $selectedMenuRaw")
+
+// ✅ Correctly split using `;` instead of `,`
+        val selectedMenu = selectedMenuRaw.split(";").mapNotNull { item ->
+            val parts = item.split(" x")
+            if (parts.size == 2) {
+                parts[0].replace("_", " ").trim() to parts[1].trim().toInt() // ✅ Restore spaces
+            } else null
+        }.toMap()
 
         BookingConfirmationScreen(
             hotelName = hotelName,
             selectedSeats = selectedSeats,
-            selectedMenuItems = selectedMenu, // ✅ Pass selected menu items
+            selectedMenu = selectedMenu,
             onConfirm = {
                 navController.popBackStack()
             }
         )
     }
 }
+
+
 
 
 

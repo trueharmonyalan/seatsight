@@ -45,16 +45,26 @@ fun BookSeatScreen(
     val background = Color(android.graphics.Color.parseColor("#D9D9D9"))
     val containerColor = Color(android.graphics.Color.parseColor("#FFFFFF"))
     val selectedSeats = remember { mutableStateOf(setOf<Int>()) }
+    val selectedItems = remember { mutableStateMapOf<MenuItem, Int>() }
+
     val repository = remember { HotelRepository() }
     val viewModel: HotelViewModel = viewModel(factory = HotelViewModelFactory(repository))
     val seatList by viewModel.seatList.collectAsState()
     val menuList by viewModel.menuList.collectAsState()
-    val selectedItems = remember { mutableStateMapOf<MenuItem, Int>() }
+
+    var isSeatSelected by remember { mutableStateOf(false) }
+    var isMenuSelected by remember { mutableStateOf(false) }
 
     LaunchedEffect(restaurantId) {
-        Log.d("BookSeatScreen", "Fetching seats for restaurantId: $restaurantId")
+        Log.d("BookSeatScreen", "Fetching seats and menu for restaurantId: $restaurantId")
         viewModel.fetchSeats(restaurantId)
         viewModel.fetchMenu(restaurantId)
+    }
+
+    // **Update states when selection changes**
+    LaunchedEffect(selectedSeats.value, selectedItems) {
+        isSeatSelected = selectedSeats.value.isNotEmpty()
+        isMenuSelected = selectedItems.values.any { it > 0 }
     }
 
     Surface(
@@ -65,7 +75,6 @@ fun BookSeatScreen(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // **Fixed Hotel Name**
             Text(
                 text = hotelName,
                 fontSize = 26.sp,
@@ -76,9 +85,8 @@ fun BookSeatScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // **Make this part scrollable**
             LazyColumn(
-                modifier = Modifier.weight(1f) // ✅ Allows scrolling while keeping Confirm Button fixed
+                modifier = Modifier.weight(1f)
             ) {
                 item {
                     // **Seat Selection Container**
@@ -109,14 +117,14 @@ fun BookSeatScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // **Menu Selection Container**
+                    // **Menu Selection Container - Disabled until a seat is selected**
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(250.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .border(1.dp, Color.Gray, RoundedCornerShape(16.dp))
-                            .background(containerColor) // ✅ Same color as seat selector
+                            .background(if (isSeatSelected) containerColor else Color.LightGray) // ✅ Disable visually
                             .padding(16.dp)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -130,11 +138,9 @@ fun BookSeatScreen(
                             if (menuList.isEmpty()) {
                                 Text("No menu available", fontSize = 16.sp, color = Color.Gray)
                             } else {
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxHeight() // ✅ Scroll inside container
-                                ) {
+                                LazyColumn(modifier = Modifier.fillMaxHeight()) {
                                     items(menuList) { menuItem ->
-                                        MenuItemCard(menuItem, selectedItems)
+                                        MenuItemCard(menuItem, selectedItems, isSeatSelected) // ✅ Pass disabled state
                                     }
                                 }
                             }
@@ -147,14 +153,16 @@ fun BookSeatScreen(
 
             // **Fixed Confirm Button**
             ButtonForBookAndView(
-                selectedSeats = selectedSeats.value,
-                selectedItems = selectedItems,
+                isEnabled = isSeatSelected || isMenuSelected, // ✅ Updated condition
+                selectedSeats = selectedSeats.value.map { it.toString() }.toSet(),
+                selectedItems = selectedItems.mapKeys { it.key.name ?: "Unknown" },
                 navController = navController,
                 hotelName = hotelName
             )
         }
     }
 }
+
 
 
 
@@ -166,7 +174,7 @@ fun SeatSelector(
     selectedSeats: MutableState<Set<Int>>
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(4), // ✅ 4x4 Matrix
+        columns = GridCells.Fixed(4),
         modifier = Modifier
             .height(250.dp)
             .fillMaxWidth()
@@ -208,7 +216,7 @@ fun SeatSelector(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = seat.seatNumber.toString(), // ✅ Display correct seat number
+                    text = seat.seatNumber.toString(),
                     color = Color.Black,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -219,25 +227,14 @@ fun SeatSelector(
 }
 
 
-@Composable
-fun MenuSelector(
-    menuList: List<MenuItem>,
-    selectedItems: MutableMap<MenuItem, Int>
-) {
-    LazyColumn(
-        modifier = Modifier.padding(10.dp)
-    ) {
-        items(menuList) { menuItem ->
-            MenuItemCard(menuItem, selectedItems)
-        }
-    }
-}
+
 
 // **Menu Item UI**
 @Composable
 fun MenuItemCard(
     menuItem: MenuItem,
-    selectedItems: MutableMap<MenuItem, Int>
+    selectedItems: MutableMap<MenuItem, Int>,
+    isEnabled: Boolean // ✅ Pass enabled state
 ) {
     val quantity = selectedItems[menuItem] ?: 0
 
@@ -246,7 +243,7 @@ fun MenuItemCard(
             .fillMaxWidth()
             .padding(8.dp),
         shape = RoundedCornerShape(12.dp),
-        color = Color.LightGray
+        color = if (isEnabled) Color.LightGray else Color.Gray // ✅ Disable visually
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -268,11 +265,23 @@ fun MenuItemCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { if (quantity > 0) selectedItems[menuItem] = quantity - 1 }) {
+                IconButton(
+                    onClick = {
+                        if (quantity > 0) {
+                            selectedItems[menuItem] = quantity - 1
+                        }
+                    },
+                    enabled = isEnabled // ✅ Disable buttons when menu is disabled
+                ) {
                     Text(text = "-", fontSize = 24.sp)
                 }
                 Text(text = quantity.toString(), fontSize = 18.sp)
-                IconButton(onClick = { selectedItems[menuItem] = quantity + 1 }) {
+                IconButton(
+                    onClick = {
+                        selectedItems[menuItem] = quantity + 1
+                    },
+                    enabled = isEnabled // ✅ Disable buttons when menu is disabled
+                ) {
                     Text(text = "+", fontSize = 24.sp)
                 }
             }
@@ -290,40 +299,43 @@ fun MenuItemCard(
 // **Book Button**
 @Composable
 fun ButtonForBookAndView(
-    selectedSeats: Set<Int>,
-    selectedItems: MutableMap<MenuItem, Int>,
+    isEnabled: Boolean, // ✅ Control enabled state
+    selectedSeats: Set<String>,
+    selectedItems: Map<String, Int>,
     navController: NavController,
     hotelName: String
 ) {
-    val isButtonEnabled = selectedSeats.isNotEmpty() || selectedItems.isNotEmpty()
+
 
     Button(
         onClick = {
             val seatListString = selectedSeats.joinToString(",")
-            val menuListString = selectedItems.entries.joinToString(",") { "${it.key.name} x${it.value}" }
+
+            val menuListString = selectedItems.entries.joinToString(";") {
+                "${it.key.replace(" ", "_")} x${it.value}"
+            }
 
             val formattedRoute = bookingConfirmation.route
                 .replace("{hotelName}", hotelName)
                 .replace("{selectedSeats}", seatListString)
                 .replace("{selectedMenu}", menuListString)
 
+            Log.d("Navigation", "Final Navigation URL: $formattedRoute") // ✅ Debugging Log
+
             navController.navigate(formattedRoute)
+
+
         },
-        modifier = Modifier
-            .height(50.dp)
-            .width(200.dp),
+        modifier = Modifier.height(50.dp).width(200.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isButtonEnabled) buttonColorBook else Color.Gray
+            containerColor = if (isEnabled) buttonColorBook else Color.Gray
         ),
-        enabled = isButtonEnabled
+        enabled = isEnabled // ✅ Enable only when conditions met
     ) {
-        Text(
-            text = "Confirm Booking",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text(text = "Confirm Booking", fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
+
 
 
 // **Preview for Testing**

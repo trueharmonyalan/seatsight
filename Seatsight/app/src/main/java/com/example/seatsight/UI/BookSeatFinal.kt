@@ -1,7 +1,10 @@
 
+import android.app.TimePickerDialog
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.BlendMode.Companion.Color
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,18 +35,27 @@ import androidx.navigation.NavController
 import com.example.seatsight.UI.buttonColorBook
 import com.example.seatsight.UI.surfaceColor
 import com.example.seatsight.bookingConfirmation
-
+import com.example.seatsight.data.model.MenuItem
+import java.util.Calendar
 @Composable
 fun BookingConfirmationScreen(
     hotelName: String,
     selectedSeats: Set<String>,
-    selectedMenuItems: Map<String, Int>, // ✅ Include menu selections
+    selectedMenu: Map<String, Int>,
     modifier: Modifier = Modifier,
     onConfirm: () -> Unit = {}
 ) {
     val background = Color(android.graphics.Color.parseColor("#D9D9D9"))
     val containerColor = surfaceColor
     val showAlert = remember { mutableStateOf(false) }
+
+    // ✅ Remember state for time selection
+    val startTime = remember { mutableStateOf("Select Start Time") }
+    val endTime = remember { mutableStateOf("Select End Time") }
+
+    Log.d("BookingConfirmation", "Hotel: $hotelName")
+    Log.d("BookingConfirmation", "Selected Seats: ${selectedSeats.joinToString(", ")}")
+    Log.d("BookingConfirmation", "Selected Menu: $selectedMenu")
 
     Surface(
         modifier = Modifier
@@ -63,80 +76,89 @@ fun BookingConfirmationScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 20.dp, bottom = 40.dp),
+                    .padding(top = 20.dp, bottom = 20.dp),
                 textAlign = TextAlign.Center
             )
 
-            // **Confirmation Details**
+            // **Booking Details Container (Same Style for All Sections)**
             Surface(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .wrapContentSize()
-                    .padding(horizontal = 24.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(containerColor),
                 color = containerColor
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // **Hotel Name**
                     Text(
                         text = "Hotel: $hotelName",
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    // **Display Selected Seats**
-                    Text(
-                        text = "Selected Seats: ${selectedSeats.joinToString(", ")}",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    // **Display Selected Menu Items**
-                    if (selectedMenuItems.isNotEmpty()) {
-                        Text(
-                            text = "Selected Menu Items:",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        selectedMenuItems.forEach { (item, quantity) ->
-                            Text(
-                                text = "$item x$quantity",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Normal
-                            )
+                    // **Selected Seats**
+                    BookingInfoSection(title = "Selected Seats") {
+                        if (selectedSeats.isEmpty()) {
+                            Text("No seats selected", fontSize = 16.sp, color = androidx.compose.ui.graphics.Color.Gray)
+                        } else {
+                            Text(selectedSeats.joinToString(", "), fontSize = 16.sp)
                         }
-                    } else {
-                        Text(
-                            text = "No menu items selected",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = androidx.compose.ui.graphics.Color.Gray
-                        )
                     }
 
-                    // **Confirm Button**
-                    Button(
-                        onClick = { showAlert.value = true },
-                        colors = ButtonDefaults.buttonColors(buttonColorBook),
-                        modifier = Modifier
-                            .height(40.dp)
-                            .width(160.dp)
-                    ) {
-                        Text(text = "Confirm", fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // **Ordered Items**
+                    BookingInfoSection(title = "Ordered Items") {
+                        val filteredMenu = selectedMenu.filterValues { it > 0 }
+                        if (filteredMenu.isEmpty()) {
+                            Text("Nothing is selected to order", fontSize = 16.sp, color = androidx.compose.ui.graphics.Color.Gray)
+                        } else {
+                            Column {
+                                filteredMenu.forEach { (menuItem, quantity) ->
+                                    Text("$menuItem x$quantity", fontSize = 16.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // **Booking Time Selection**
+                    BookingInfoSection(title = "Booking Time") {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            TimePickerButton(label = startTime.value) {
+                                startTime.value = it
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            TimePickerButton(label = endTime.value) {
+                                endTime.value = it
+                            }
+                        }
                     }
                 }
             }
 
-            // **Alert Dialog**
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // **Confirm Booking Button**
+            Button(
+                onClick = { showAlert.value = true },
+                colors = ButtonDefaults.buttonColors(buttonColorBook),
+                modifier = Modifier
+                    .height(40.dp)
+                    .width(160.dp)
+            ) {
+                Text(text = "Confirm", fontSize = 16.sp)
+            }
+
             if (showAlert.value) {
                 AlertDialogComponent(
-                    message = "Your booking is confirmed. The amount will be added to your bill after dining.",
+                    message = "Your booking is confirmed! The total amount will be added to your bill.",
                     onDismiss = { showAlert.value = false },
                     onConfirm = {
                         showAlert.value = false
@@ -147,42 +169,59 @@ fun BookingConfirmationScreen(
         }
     }
 }
+
 @Composable
-fun ButtonForBookAndView(
-    selectedSeats: Set<String>,
-    selectedItems: Map<String, Int>,
-    navController: NavController,
-    hotelName: String
-) {
-    val isButtonEnabled = selectedSeats.isNotEmpty() || selectedItems.isNotEmpty()
+fun BookingInfoSection(title: String, content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = title,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        content()
+    }
+}
+
+
+@Composable
+fun TimePickerButton(label: String, onTimeSelected: (String) -> Unit) {
+    val context = LocalContext.current
+    val timePicker = remember { mutableStateOf(label) }
 
     Button(
         onClick = {
-            val seatListString = selectedSeats.joinToString(",")
-            val menuListString = selectedItems.entries.joinToString(",") { "${it.key} x${it.value}" }
-
-            val formattedRoute = bookingConfirmation.route
-                .replace("{hotelName}", hotelName)
-                .replace("{selectedSeats}", seatListString)
-                .replace("{selectedMenu}", menuListString)
-
-            navController.navigate(formattedRoute)
+            val cal = Calendar.getInstance()
+            TimePickerDialog(
+                context,
+                { _, hour, minute ->
+                    val formattedTime = String.format("%02d:%02d", hour, minute)
+                    timePicker.value = formattedTime
+                    onTimeSelected(formattedTime)
+                },
+                cal.get(Calendar.HOUR_OF_DAY),
+                cal.get(Calendar.MINUTE),
+                true
+            ).show()
         },
+        colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color.White),
         modifier = Modifier
-            .height(50.dp)
-            .width(200.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isButtonEnabled) buttonColorBook else androidx.compose.ui.graphics.Color.Gray
-        ),
-        enabled = isButtonEnabled
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
     ) {
-        Text(
-            text = "Confirm Booking",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text(text = timePicker.value, color = androidx.compose.ui.graphics.Color.Black, fontSize = 16.sp)
     }
 }
+
+
+
+
+
 
 // **Reusable Alert Dialog Component**
 @Composable
@@ -206,6 +245,6 @@ fun PreviewBookingConfirmationScreen() {
     BookingConfirmationScreen(
         hotelName = "Hotel Example",
         selectedSeats = setOf("S1", "S2"),
-        selectedMenuItems = mapOf("Pasta" to 2, "Pizza" to 1)
+        selectedMenu = mapOf()
     )
 }
