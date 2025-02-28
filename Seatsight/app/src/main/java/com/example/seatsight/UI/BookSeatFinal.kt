@@ -48,14 +48,12 @@ fun BookingConfirmationScreen(
     val background = Color(android.graphics.Color.parseColor("#D9D9D9"))
     val containerColor = surfaceColor
     val showAlert = remember { mutableStateOf(false) }
+    val showTimeAlert = remember { mutableStateOf(false) }
+    val timeAlertMessage = remember { mutableStateOf("") } // ⚠️ Dynamic alert message
 
     // ✅ Remember state for time selection
-    val startTime = remember { mutableStateOf("Select Start Time") }
-    val endTime = remember { mutableStateOf("Select End Time") }
-
-    Log.d("BookingConfirmation", "Hotel: $hotelName")
-    Log.d("BookingConfirmation", "Selected Seats: ${selectedSeats.joinToString(", ")}")
-    Log.d("BookingConfirmation", "Selected Menu: $selectedMenu")
+    val startTime = remember { mutableStateOf("") }
+    val endTime = remember { mutableStateOf("") }
 
     Surface(
         modifier = Modifier
@@ -69,7 +67,6 @@ fun BookingConfirmationScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // **Header**
             Text(
                 text = "Confirm Your Booking",
                 fontSize = 24.sp,
@@ -80,7 +77,7 @@ fun BookingConfirmationScreen(
                 textAlign = TextAlign.Center
             )
 
-            // **Booking Details Container (Same Style for All Sections)**
+            // **Booking Details Container**
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -113,7 +110,7 @@ fun BookingConfirmationScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // **Ordered Items**
-                    BookingInfoSection(title = "Ordered Items") {
+                    BookingInfoSection(title = "Selected Items") {
                         val filteredMenu = selectedMenu.filterValues { it > 0 }
                         if (filteredMenu.isEmpty()) {
                             Text("Nothing is selected to order", fontSize = 16.sp, color = androidx.compose.ui.graphics.Color.Gray)
@@ -129,13 +126,13 @@ fun BookingConfirmationScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // **Booking Time Selection**
-                    BookingInfoSection(title = "Booking Time") {
+                    BookingInfoSection(title = "Reserved Time") {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            TimePickerButton(label = startTime.value) {
+                            TimePickerButton(label = startTime.value.ifEmpty { "Select Start Time" }) {
                                 startTime.value = it
                             }
                             Spacer(modifier = Modifier.height(12.dp))
-                            TimePickerButton(label = endTime.value) {
+                            TimePickerButton(label = endTime.value.ifEmpty { "Select End Time" }) {
                                 endTime.value = it
                             }
                         }
@@ -145,9 +142,25 @@ fun BookingConfirmationScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // **Confirm Booking Button**
+            // **Confirm Booking Button with Smart Time Validation**
             Button(
-                onClick = { showAlert.value = true },
+                onClick = {
+                    when {
+                        startTime.value.isEmpty() && endTime.value.isEmpty() -> {
+                            timeAlertMessage.value = "Please select both Start and End Time."
+                            showTimeAlert.value = true
+                        }
+                        startTime.value.isEmpty() -> {
+                            timeAlertMessage.value = "Please select Start Time."
+                            showTimeAlert.value = true
+                        }
+                        endTime.value.isEmpty() -> {
+                            timeAlertMessage.value = "Please select End Time."
+                            showTimeAlert.value = true
+                        }
+                        else -> showAlert.value = true
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(buttonColorBook),
                 modifier = Modifier
                     .height(40.dp)
@@ -156,6 +169,16 @@ fun BookingConfirmationScreen(
                 Text(text = "Confirm", fontSize = 16.sp)
             }
 
+            // **Smart Time Selection Alert**
+            if (showTimeAlert.value) {
+                AlertDialogComponent(
+                    message = timeAlertMessage.value, // ⚠️ Displays specific message
+                    onDismiss = { showTimeAlert.value = false },
+                    onConfirm = { showTimeAlert.value = false }
+                )
+            }
+
+            // **Booking Confirmation Alert**
             if (showAlert.value) {
                 AlertDialogComponent(
                     message = "Your booking is confirmed! The total amount will be added to your bill.",
@@ -169,6 +192,8 @@ fun BookingConfirmationScreen(
         }
     }
 }
+
+
 
 @Composable
 fun BookingInfoSection(title: String, content: @Composable () -> Unit) {
@@ -217,8 +242,6 @@ fun TimePickerButton(label: String, onTimeSelected: (String) -> Unit) {
         Text(text = timePicker.value, color = androidx.compose.ui.graphics.Color.Black, fontSize = 16.sp)
     }
 }
-
-
 
 
 
