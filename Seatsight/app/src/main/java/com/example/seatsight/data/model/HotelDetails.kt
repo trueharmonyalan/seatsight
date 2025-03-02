@@ -5,8 +5,9 @@ package com.example.seatsight.data.model
 
 
 data class HotelResponse(
-    val restaurant_id: Int,   // ✅ Matches API response
+    val restaurant_id: Int, // ✅ Matches API response
     val hotel_name: String,   // ✅ Matches API response
+    val hotel_description: String,
     val menu: List<MenuItem>  // ✅ Stores menu items as a list of objects
 )
 
