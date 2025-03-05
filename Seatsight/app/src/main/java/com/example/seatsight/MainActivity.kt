@@ -1,6 +1,7 @@
 package com.example.seatsight
 
 import BookingConfirmationScreen
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -20,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.seatsight.UI.BookSeatScreen
 import com.example.seatsight.UI.BookSeatWindow
+import com.example.seatsight.UI.ViewSeatsScreen
 import com.example.seatsight.UI.authentication.AuthHome
 import com.example.seatsight.UI.authentication.LoginScreen
 import com.example.seatsight.UI.authentication.RegisterScreen
@@ -102,9 +104,52 @@ fun SeatSightApp(){
 //                    AvailableHotelsForBookSeat.screen()
 //                }
 
+                composable(
+                    route = "viewSeatScreen/{hotelName}/{restaurantId}",
+                    arguments = listOf(
+                        navArgument("hotelName") { type = NavType.StringType },
+                        navArgument("restaurantId") { type = NavType.IntType }
+                    )
+                ) { backStackEntry ->
+                    val hotelName = Uri.decode(backStackEntry.arguments?.getString("hotelName") ?: "") // ✅ Decode here
+                    val restaurantId = backStackEntry.arguments?.getInt("restaurantId") ?: 0
+
+                    Log.d("NavHost", "Navigating to ViewSeatsScreen with hotel: $hotelName, id: $restaurantId") // ✅ Debug log
+
+                    ViewSeatsScreen(
+                        hotelName = hotelName,
+                        restaurantId = restaurantId,
+                        navController = navController
+                    )
+                }
 
 
-                    composable(route = AvailableHotelsForBookSeat.route) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                composable(route = AvailableHotelsForBookSeat.route) {
                         BookSeatWindow(navController = navController)
                     }
 

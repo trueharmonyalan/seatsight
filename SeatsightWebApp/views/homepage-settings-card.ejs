@@ -29,10 +29,24 @@
                             <input type="url" class="form-control" id="ipurl" name="ipurl" value="<%= info.showUrl %>" required>
                         </div>
                         <button type="submit" class="btn btn-primary">Update</button>
-                        <a href="/auth" class="btn btn-secondary">Back</a>
                     </form>
 
+                <% } else { %>
+                    <p class="get-started-ui-text-color">No IP Camera URL found. Please add one below.</p>
+
+                    <form method="POST" action="/settings">
+                        <div class="mb-3">
+                            <label for="ipurl" class="get-started-ui-text-color-bold">Enter IP Camera URL:</label>
+                            <input type="url" class="form-control" id="ipurl" name="ipurl" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </form>
                 <% } %>
+
+                <div class="center-it-button-ip-cam">
+                    <a href="/settings" class="btn btn-secondary">Back</a>
+                    <a href="/auth" class="btn btn-primary">Done</a>
+                </div>
             </div>
         </div>
     </div>

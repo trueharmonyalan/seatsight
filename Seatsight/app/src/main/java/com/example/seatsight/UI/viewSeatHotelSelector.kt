@@ -2,6 +2,7 @@ package com.example.seatsight.UI
 
 
 import HotelViewModel
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -84,22 +85,24 @@ fun ViewSeatsWindow(
                             // ✅ Pass real hotels from API for Viewing Seats
                             DisplaylistofHotelsForViewing(
                                 hotelDetail = hotels.map { apiHotel ->
-                                    Log.d("ViewSeatsWindow", "Mapping hotel: ${apiHotel.hotel_name}, ID: ${apiHotel.restaurant_id}") // ✅ Debug log
-
                                     HotelDetails(
                                         name = apiHotel.hotel_name,
                                         description = "Description Not Available",
                                         menuItems = emptyList(),
-                                        restaurantId = apiHotel.restaurant_id // ✅ Ensure restaurantId is mapped
+                                        restaurantId = apiHotel.restaurant_id
                                     )
                                 },
                                 onHotelSelected = { hotelName, restaurantId ->
-                                    Log.d("ViewSeatsWindow", "Navigating to ViewSeatsScreen with ID: $restaurantId") // ✅ Debug log
-                                    val formattedRoute = "viewSeatScreen/${hotelName}/${restaurantId}" // ✅ Ensure proper string formatting
+                                    Log.d("ViewSeatsWindow", "Navigating to ViewSeatsScreen with: hotelName=$hotelName, restaurantId=$restaurantId")
+
+                                    val encodedHotelName = Uri.encode(hotelName) // ✅ Encode the hotel name properly
+                                    val formattedRoute = "viewSeatScreen/$encodedHotelName/$restaurantId"
 
                                     Log.d("Navigation", "Navigating to: $formattedRoute") // ✅ Debug log
                                     navController.navigate(formattedRoute)
                                 }
+
+
                             )
 
                         }

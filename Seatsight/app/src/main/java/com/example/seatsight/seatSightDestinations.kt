@@ -91,6 +91,24 @@ object AvailableHotelsForBookSeat : seatSightDestinations {
 
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 object bookSeatScreen : dynamicseatSightDestinations {
     override val route: String = "bookSeatScreen/{hotelName}/{restaurantId}" // ✅ Ensure parameter names match exactly
 

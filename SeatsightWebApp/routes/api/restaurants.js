@@ -16,11 +16,11 @@ router.get("/", async (req, res) => {
 
 // ✅ Add a New Restaurant (Owner Only)
 router.post("/", async (req, res) => {
-    const { owner_id, name, address, ip_camera_url } = req.body;
+    const { owner_id, name, ip_camera_url } = req.body;
 
     try {
         const result = await db.query(
-            "INSERT INTO restaurants (owner_id, name, address, ip_camera_url) VALUES ($1, $2, $3, $4) RETURNING id, name",
+            "INSERT INTO restaurants (owner_id, name, ip_camera_url) VALUES ($1, $2, $3, $4) RETURNING id, name",
             [owner_id, name, address, ip_camera_url]
         );
         res.json({ message: "Restaurant added successfully", restaurant: result.rows[0] });
@@ -98,7 +98,16 @@ router.get("/android/hotels-menu", async (req, res) => {
 });
 
 
-
+router.get("/ip-url/:owner_id", async (req, res) => {
+    const { owner_id } = req.params;
+    try {
+        const result = await db.query("SELECT ip_camera_url FROM restaurants WHERE owner_id = $1",[owner_id ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Database Error:", err);
+        res.status(500).json({ error: "Failed to fetch restaurants" });
+    }
+});
 
 
 export default router;

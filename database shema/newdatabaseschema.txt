@@ -145,6 +145,66 @@ CREATE TABLE menu_items (
 
 
 
+//new one - going to finalising
+-- ✅ Users Table (No Change)
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role VARCHAR(10) CHECK (role IN ('owner', 'customer')) NOT NULL
+);
+
+-- ✅ Restaurants Table (Seating Capacity Can Be NULL Initially)
+CREATE TABLE restaurants (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    seating_capacity INTEGER CHECK (seating_capacity > 0), -- Nullable initially
+    ip_camera_url TEXT DEFAULT NULL -- New column for storing the IP Camera URL
+);
+
+-- ✅ Seats Table (Updated with Location Coordinates)
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_number INTEGER NOT NULL CHECK (seat_number > 0),
+    is_booked BOOLEAN DEFAULT FALSE, -- Indicates if a seat is booked
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied')) DEFAULT 'vacant', -- NEW: Real-time seat status
+    pos_x INTEGER,  -- X-coordinate for AI tracking
+    pos_y INTEGER,  -- Y-coordinate for AI tracking
+    UNIQUE (restaurant_id, seat_number) -- Ensure unique seat numbers per restaurant
+);
+
+-- ✅ Seat Status Table (For Real-Time Occupancy Updates)
+
+
+CREATE TABLE seat_status (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_number INTEGER NOT NULL,
+    timestamp TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied')) NOT NULL,
+    UNIQUE (restaurant_id, seat_number, timestamp)
+);
+
+
+-- ✅ Bookings Table (For Reservations)
+CREATE TABLE bookings (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    booking_time TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(10) CHECK (status IN ('pending', 'confirmed', 'cancelled')) DEFAULT 'pending'
+);
+
+CREATE TABLE menu_items (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    price DECIMAL(10,2) NOT NULL
+);
 
 
 
@@ -155,9 +215,17 @@ CREATE TABLE menu_items (
 
 
 
+//old seat table
 
-
-
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    seat_number INTEGER NOT NULL CHECK (seat_number > 0),
+    is_booked BOOLEAN DEFAULT FALSE,
+    pos_x INTEGER,  -- New: X-coordinate of the seat's centroid (or designated position)
+    pos_y INTEGER,  -- New: Y-coordinate of the seat's centroid (or designated position)
+    UNIQUE (restaurant_id, seat_number) -- Ensure unique seat numbers per restaurant
+);
 
 
 

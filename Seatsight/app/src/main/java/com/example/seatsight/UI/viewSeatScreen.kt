@@ -13,9 +13,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,15 +51,13 @@ import com.example.seatsight.ui.theme.SeatsightTheme
 fun ViewSeatsScreen(
     hotelName: String,
     restaurantId: Int,
-    navController: NavController,
-    modifier: Modifier = Modifier
+    navController: NavController
 ) {
     val repository = remember { HotelRepository() }
     val viewModel: HotelViewModel = viewModel(factory = HotelViewModelFactory(repository))
 
-    val seats by viewModel.seatList.collectAsState() // ✅ Get seat data from ViewModel
+    val seats by viewModel.seatList.collectAsState()
 
-    // ✅ Fetch seats when screen is opened
     LaunchedEffect(restaurantId) {
         viewModel.fetchSeats(restaurantId)
     }
@@ -64,19 +67,50 @@ fun ViewSeatsScreen(
         color = surfaceColor
     ) {
         Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .background(surfaceColor)
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Seats for $hotelName",
-                fontSize = 24.sp,
+                text = "Seats in $hotelName",
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
             )
 
-            // ✅ Show seats dynamically
-//            DisplaySeatsForHotel(seats)
+            if (seats.isEmpty()) {
+                Text(text = "No seats available", fontSize = 18.sp, color = Color.Gray)
+            } else {
+                DisplaySeatsForHotel(seats)
+            }
+        }
+    }
+}
+
+
+@Composable
+fun DisplaySeatsForHotel(seats: List<Seat>) {
+    LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.fillMaxSize()) {
+        items(seats.size) { index ->
+            val seat = seats[index]
+            val seatStatus = if (seat.isBooked) "Booked" else "Available"
+            val statusColor = if (seat.isBooked) Color.Red else Color.Green
+
+            Surface(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .size(70.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = statusColor.copy(alpha = 0.3f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "Seat ${seat.seatNumber}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(text = seatStatus, fontSize = 16.sp, color = statusColor)
+                }
+            }
         }
     }
 }
@@ -102,33 +136,9 @@ fun ViewSeatsScreen(
 //    }
 //}
 
-
+@Preview
 @Composable
-fun SeatItem(seat: Seat) {
-    val seatColor = if (seat.isBooked) Color.Red else Color.Green
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .background(seatColor, shape = RoundedCornerShape(8.dp))
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Seat ${seat.seatNumber}",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Text(
-            text = if (seat.isBooked) "Booked" else "Available",
-            fontSize = 16.sp,
-            color = Color.White
-        )
-    }
+fun PreviewViewSeatsScreen() {
+    val navController = rememberNavController()
+    ViewSeatsScreen(hotelName = "Test Hotel", restaurantId = 1, navController = navController)
 }
-
