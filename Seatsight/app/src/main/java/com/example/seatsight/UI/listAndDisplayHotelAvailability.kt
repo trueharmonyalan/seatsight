@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -208,17 +209,86 @@ fun displayListMenuForHome(
 }
 
 // for view seats button
+//@Composable
+//fun listofHotelsForViewing(
+//    hotel: HotelDetails,
+//    onHotelSelected: (String, Int) -> Unit
+//) {
+//    val buttonColor = Color(android.graphics.Color.parseColor("#005BBB")) // Different color for view seats
+//    val textColor = Color(android.graphics.Color.parseColor("#EFEFEF"))
+//    val containerColor = Color(android.graphics.Color.parseColor("#F0EBEB"))
+//
+//    Surface(
+//        modifier = Modifier.padding(vertical = 10.dp, horizontal = 10.dp),
+//        shape = RoundedCornerShape(12.dp)
+//    ) {
+//        Column(
+//            modifier = Modifier
+//                .background(containerColor)
+//                .padding(16.dp)
+//        ) {
+//            Row(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(80.dp),
+//                verticalAlignment = Alignment.CenterVertically,
+//                horizontalArrangement = Arrangement.SpaceBetween
+//            ) {
+//                Column(
+//                    modifier = Modifier.weight(0.7f)
+//                ) {
+//                    Text(
+//                        text = hotel.name,
+//                        fontSize = 20.sp,
+//                        fontWeight = FontWeight.Bold
+//                    )
+//                    Text(
+//                        text = hotel.description,
+//                        fontSize = 16.sp
+//                    )
+//                }
+//
+//                Button(
+//                    onClick = {
+//                        Log.d("listofHotelsForViewing", "Viewing seats for hotel: ${hotel.name}, ID: ${hotel.restaurantId}")
+//                        onHotelSelected(hotel.name, hotel.restaurantId) // Navigate to view seats
+//                    },
+//                    colors = ButtonDefaults.buttonColors(buttonColor)
+//                ) {
+//                    Text(text = "View Seats", color = textColor)
+//                }
+//            }
+//        }
+//    }
+//}
+//
+//@Composable
+//fun DisplaylistofHotelsForViewing(
+//    hotelDetail: List<HotelDetails>,
+//    onHotelSelected: (String, Int) -> Unit
+//) {
+//    LazyColumn(
+//        modifier = Modifier.padding(horizontal = 0.dp)
+//    ) {
+//        items(items = hotelDetail) { hotel ->
+//            listofHotelsForViewing(hotel = hotel, onHotelSelected = onHotelSelected)
+//        }
+//    }
+//}
 @Composable
-fun listofHotelsForViewing(
+fun ListOfHotelsForViewing(
     hotel: HotelDetails,
     onHotelSelected: (String, Int) -> Unit
 ) {
-    val buttonColor = Color(android.graphics.Color.parseColor("#005BBB")) // Different color for view seats
-    val textColor = Color(android.graphics.Color.parseColor("#EFEFEF"))
-    val containerColor = Color(android.graphics.Color.parseColor("#F0EBEB"))
+    // Define colors
+    val buttonColor = Color(0xFF005BBB)
+    val textColor = Color(0xFFEFEFEF)
+    val containerColor = Color(0xFFF0EBEB)
 
-    Surface(
-        modifier = Modifier.padding(vertical = 10.dp, horizontal = 10.dp),
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -230,28 +300,22 @@ fun listofHotelsForViewing(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
                     modifier = Modifier.weight(0.7f)
                 ) {
                     Text(
                         text = hotel.name,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 20.sp
                     )
                     Text(
                         text = hotel.description,
                         fontSize = 16.sp
                     )
                 }
-
                 Button(
-                    onClick = {
-                        Log.d("listofHotelsForViewing", "Viewing seats for hotel: ${hotel.name}, ID: ${hotel.restaurantId}")
-                        onHotelSelected(hotel.name, hotel.restaurantId) // Navigate to view seats
-                    },
+                    onClick = { onHotelSelected(hotel.name, hotel.restaurantId) },
                     colors = ButtonDefaults.buttonColors(buttonColor)
                 ) {
                     Text(text = "View Seats", color = textColor)
@@ -266,11 +330,9 @@ fun DisplaylistofHotelsForViewing(
     hotelDetail: List<HotelDetails>,
     onHotelSelected: (String, Int) -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.padding(horizontal = 0.dp)
-    ) {
-        items(items = hotelDetail) { hotel ->
-            listofHotelsForViewing(hotel = hotel, onHotelSelected = onHotelSelected)
+    LazyColumn {
+        items(hotelDetail) { hotel ->
+            ListOfHotelsForViewing(hotel = hotel, onHotelSelected = onHotelSelected)
         }
     }
 }

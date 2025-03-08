@@ -194,7 +194,7 @@ fun homescreen(
                     }
 
                     Button(
-                        onClick = { navController.navigate("viewSeatAvailableSeatList") },
+                        onClick = { navController.navigate("viewSeatAvailableHotelList") },
                         modifier = Modifier.weight(1f).padding(5.dp).height(80.dp),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(seatAndViewButtonColor)

@@ -11,28 +11,3 @@ data class HotelDetails(
     val restaurantId: Int // ✅ Added `restaurantId`
 )
 
-
-// Example Data
-//var hotels = listOf(
-//    HotelDetails(
-//        name = "Hotel Kottayam",
-//        description = "Kerala cuisine",
-//        menuItems = listOf("Masala Dosa", "Idli Sambar", "Kerala Parotta")
-//    ),
-//    HotelDetails(
-//        name = "Hotel Ettumanoor",
-//        description = "Arabic cuisine",
-//        menuItems = listOf("Shawarma", "Hummus", "Falafel")
-//    ),
-//    HotelDetails(
-//        name = "Hotel Ettumanoor",
-//        description = "Arabic cuisine",
-//        menuItems = listOf("Shawarma", "Hummus", "Falafel")
-//    ),
-//    HotelDetails(
-//        name = "Hotel Ettumanoor",
-//        description = "Arabic cuisine",
-//        menuItems = listOf("Shawarma", "Hummus", "Falafel")
-//    )
-//
-//)

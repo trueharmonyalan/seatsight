@@ -7,11 +7,12 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.seatsight.UI.BookSeatScreen
+import com.example.seatsight.UI.ViewSeatsWindow
 import com.example.seatsight.UI.authentication.AuthHome
 import com.example.seatsight.UI.authentication.LoginScreen
 import com.example.seatsight.UI.authentication.RegisterScreen
 import com.example.seatsight.UI.homescreen
-import com.example.seatsight.UI.viewSeatWindow
+//import com.example.seatsight.UI.viewSeatWindow
 
 
 interface dynamicseatSightDestinations {
@@ -75,11 +76,26 @@ object Home : seatSightDestinations{
 
 
 //seats viewing route
-object ViewSeatAvailableHotelList: seatSightDestinations{
-    override val route: String ="viewSeatAvailableSeatList"
-    override var screen: @Composable () -> Unit = { viewSeatWindow() }
+//object ViewSeatAvailableHotelList: seatSightDestinations{
+//    override val route: String ="viewSeatAvailableSeatList"
+//    override var screen: @Composable () -> Unit = { viewSeatWindow() }
+//
+//}
 
+
+
+
+object ViewSeatAvailableHotelList : dynamicseatSightDestinations {
+    override val route: String = "viewSeatAvailableHotelList"
+    override var screen: @Composable (Map<String, String>, NavController) -> Unit = { _, navController ->
+        // Passing the navController to ViewSeatsWindow
+        ViewSeatsWindow(navController = navController)
+    }
 }
+
+
+
+
 
 
 // book seats screen route
