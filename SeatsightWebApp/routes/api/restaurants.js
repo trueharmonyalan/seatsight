@@ -1,5 +1,6 @@
 import express from "express";
 import db from "../../config/database.js";
+import axios from "axios"
 
 const router = express.Router();
 
@@ -109,5 +110,44 @@ router.get("/ip-url/:owner_id", async (req, res) => {
     }
 });
 
+
+// router.get('/get-restaurant-id/:restaurant_id', (req, res) => {
+//     const { restaurant_id } = req.params;
+
+//     // Validate the restaurant_id
+//     if (!restaurant_id) {
+//         return res.status(400).json({ error: 'restaurant_id is required' });
+//     }
+
+//     // Simulate processing the restaurant_id
+//     console.log(`Received restaurant_id: ${restaurant_id}`);
+
+//     // Send a success response
+//     res.status(200).json({ message: 'restaurant_id received successfully', restaurant_id });
+// });
+
+router.get('/get-restaurant-id/:restaurant_id', (req, res) => {
+    const { restaurant_id } = req.params;
+
+    // Validate the restaurant_id
+    if (!restaurant_id) {
+        return res.status(400).json({ error: 'restaurant_id is required' });
+    }
+
+    // Simulate processing the restaurant_id
+    console.log(`Received restaurant_id: ${restaurant_id}`);
+
+    // Notify the Python system about the restaurant ID
+    axios.post('http://localhost:3003/update-restaurant', { restaurant_id })
+        .then(response => {
+            console.log('Successfully notified Python system:', response.data);
+        })
+        .catch(error => {
+            console.error('Failed to notify Python system:', error.message);
+        });
+
+    // Send a success response to the Android app
+    res.status(200).json({ message: 'restaurant_id received successfully', restaurant_id });
+});
 
 export default router;

@@ -145,7 +145,9 @@ CREATE TABLE menu_items (
 
 
 
-//new one - going to finalising
+//new o - going
+
+
 -- ✅ Users Table (No Change)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -207,6 +209,64 @@ CREATE TABLE menu_items (
 );
 
 
+
+// Currently using schema
+
+-- Users Table (No Change)
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role VARCHAR(10) CHECK (role IN ('owner', 'customer')) NOT NULL
+);
+
+-- Restaurants Table (Allowing one owner to have multiple restaurants)
+CREATE TABLE restaurants (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    seating_capacity INTEGER CHECK (seating_capacity > 0), -- Nullable initially
+    ip_camera_url TEXT DEFAULT NULL
+);
+
+-- Seats Table (Stores current seat status and location details)
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(owner_id) ON DELETE CASCADE,
+    seat_number INTEGER NOT NULL CHECK (seat_number > 0),
+    is_booked BOOLEAN DEFAULT FALSE,
+    status VARCHAR(10) CHECK (status IN ('vacant', 'occupied', 'reserved')) DEFAULT 'vacant',
+    pos_x INTEGER,  -- X-coordinate for AI tracking
+    pos_y INTEGER,  -- Y-coordinate for AI tracking
+    UNIQUE (restaurant_id, seat_number)
+);
+
+-- Optional Seat Status Log Table (For keeping a history of seat status changes)
+-- Uncomment this if you need to track historical status changes.
+-- CREATE TABLE seat_status_log (
+--     id SERIAL PRIMARY KEY,
+--     seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+--     timestamp TIMESTAMP DEFAULT NOW(),
+--     status VARCHAR(10) CHECK (status IN ('vacant', 'occupied', 'reserved')) NOT NULL
+-- );
+
+-- Bookings Table (Simplified to reference seat; restaurant can be derived via join)
+CREATE TABLE bookings (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    seat_id INTEGER REFERENCES seats(id) ON DELETE CASCADE,
+    booking_time TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(10) CHECK (status IN ('pending', 'confirmed', 'cancelled')) DEFAULT 'pending'
+);
+
+-- Menu Items Table (Associated directly with Restaurants)
+CREATE TABLE menu_items (
+    id SERIAL PRIMARY KEY,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    price DECIMAL(10,2) NOT NULL
+);
 
 
 

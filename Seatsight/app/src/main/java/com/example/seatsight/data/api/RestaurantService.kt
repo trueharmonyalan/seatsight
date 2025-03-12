@@ -9,4 +9,6 @@ import retrofit2.http.Path
 interface RestaurantService {
     @GET("restaurants/owner/{owner_id}")
     fun getRestaurant(@Path("owner_id") ownerId: Int): Call<Restaurant>
+
+
 }
