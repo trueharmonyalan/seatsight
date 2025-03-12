@@ -1,0 +1,636 @@
+file structure
+
+SeatsightModel
+SeatsightModel/__pycache__
+SeatsightModel/logs
+SeatsightModel/logs/seat_tracker.log
+SeatsightModel/api_client.py
+SeatsightModel/best.pt
+SeatsightModel/best3.pt
+SeatsightModel/camera.py
+SeatsightModel/code.txt
+SeatsightModel/config.ini
+SeatsightModel/config.py
+SeatsightModel/db_manager.py
+SeatsightModel/deepmodel.txt
+SeatsightModel/logger.py
+SeatsightModel/main.py
+SeatsightModel/model_runner.py
+SeatsightModel/seat_tracker.py
+SeatsightModel/utils.py
+SeatsightModel/ws_server.py
+
+_________________
+
+main.py
+
+from config import ConfigManager
+from logger import setup_logging
+from camera import CaptureThread
+from seat_tracker import SeatTracker
+import time
+import queue
+import db_manager
+
+def main():
+    logger = setup_logging()
+    config = ConfigManager()
+    
+    # Get camera URL
+    try:
+        owner_id = config.get("RESTAURANT_ID")
+        ip_camera_url = config.get_camera_url(owner_id)
+        logger.info(f"Using camera URL: {ip_camera_url}")
+    except Exception as e:
+        logger.error(f"Failed to get camera URL: {e}")
+        ip_camera_url = config.get("FALLBACK_CAMERA_URL")
+        logger.info(f"Using fallback camera URL: {ip_camera_url}")
+    
+    # Retrieve the restaurant id and database connection string from the config.
+    restaurant_id = config.get("RESTAURANT_ID")
+    db_conn_str = config.get("DATABASE_URL")
+    
+    # Fetch seat_limit from the database using the restaurant id.
+    seat_limit_from_db = db_manager.fetch_seat_count(restaurant_id, db_conn_str)
+    logger.info(f"Updating SEAT_LIMIT configuration to: {seat_limit_from_db}")
+    # Update the configuration with the seat_limit fetched from the database.
+    config.config["DEFAULT"]["SEAT_LIMIT"] = str(seat_limit_from_db)
+    
+    # Initialize seat tracker with the updated configuration.
+    seat_tracker = SeatTracker(config)
+    
+    # Start capturing frames.
+    capture_thread = CaptureThread(ip_camera_url, config)
+    capture_thread.start()
+    
+    logger.info("Seat tracking system started.")
+    
+    try:
+        while True:
+            try:
+                # Process frames when available.
+                if not capture_thread.frame_queue.empty():
+                    frame = capture_thread.frame_queue.get(timeout=0.1)
+                    seat_tracker.update_detections(frame)
+                    
+                    # Update the PostgreSQL database with the latest seat status.
+                    statuses = seat_tracker.get_status()  # Each record includes seatNumber, status, centroid, etc.
+                    db_manager.update_seats_status(statuses, restaurant_id, db_conn_str)
+                    
+                    # Print simple counts to the console every 2 seconds.
+                    current_time = time.time()
+                    if not hasattr(main, 'last_status_time') or current_time - main.last_status_time >= 2:
+                        occupied_count = sum(1 for seat in statuses if seat['status'] == 'occupied')
+                        vacant_count = sum(1 for seat in statuses if seat['status'] == 'vacant')
+                        logger.info(f"Current seat status - Occupied: {occupied_count}, Vacant: {vacant_count}")
+                        main.last_status_time = current_time
+            except queue.Empty:
+                pass  # No frames available
+                
+            # Press "q" to exit.
+            import cv2
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+                
+            time.sleep(0.01)
+            
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+    finally:
+        capture_thread.stop()
+        capture_thread.join()
+        seat_tracker.close()
+        logger.info("System shutdown complete.")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+--------------------------------
+seat_tracker.py
+
+
+import cv2
+import threading
+import logging
+from ultralytics import YOLO
+
+class SeatTracker:
+    def __init__(self, config):
+        """
+        Initialize SeatTracker with settings.
+        Expected model classes: 'empty_seat' (mapped to 'vacant') and 'person_on_seat' (mapped to 'occupied').
+        """
+        self.config = config
+        self.model_path = config.get("MODEL_PATH")
+        self.frame_size = config.get("FRAME_SIZE")
+        self.seat_limit = config.get("SEAT_LIMIT")
+        self.conf_threshold = 0.5
+        
+        self.logger = logging.getLogger("SeatTracker")
+        self.logger.setLevel(logging.INFO)
+        
+        # Load the YOLO model.
+        self.model = YOLO(self.model_path)
+        self.lock = threading.Lock()
+        self.seat_status = []
+        
+        # Map expected model classes.
+        self.expected_classes = {'empty_seat': 'vacant', 'person_on_seat': 'occupied'}
+        self.model_class_ids = {}
+        for class_id, class_name in self.model.names.items():
+            name_lower = class_name.lower()
+            if name_lower in self.expected_classes:
+                self.model_class_ids[class_id] = name_lower
+                self.logger.info(f"Detected model class: {class_name} (ID: {class_id})")
+        if len(self.model_class_ids) < 2:
+            self.logger.warning("Model may not contain both 'empty_seat' and 'person_on_seat' classes.")
+
+    def update_detections(self, frame):
+        """
+        Process a video frame to detect seat status.
+        Assign seat numbers based on position order.
+        """
+        try:
+            if frame.shape[1::-1] != self.frame_size:
+                frame = cv2.resize(frame, self.frame_size, interpolation=cv2.INTER_AREA)
+            
+            results = self.model(frame, imgsz=self.frame_size, conf=self.conf_threshold, verbose=False)
+            detections_list = []
+            for box in results[0].boxes:
+                cls_id = int(box.cls)
+                conf = float(box.conf)
+                if conf < self.conf_threshold:
+                    continue
+                if cls_id not in self.model_class_ids:
+                    continue
+                
+                predicted_class = self.model_class_ids[cls_id]
+                status = self.expected_classes[predicted_class]
+                x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
+                centroid = ((x1 + x2) // 2, (y1 + y2) // 2)
+                detections_list.append({
+                    "centroid": centroid,
+                    "bbox": (x1, y1, x2, y2),
+                    "predicted_class": predicted_class,
+                    "status": status,
+                    "confidence": conf
+                })
+            detections_list.sort(key=lambda d: (d["centroid"][1], d["centroid"][0]))
+            mapped_seats = []
+            for idx, detection in enumerate(detections_list):
+                if idx >= self.seat_limit:
+                    break
+                detection["seatNumber"] = idx + 1
+                mapped_seats.append(detection)
+            # Pad with vacant seats if needed.
+            while len(mapped_seats) < self.seat_limit:
+                mapped_seats.append({
+                    "seatNumber": len(mapped_seats) + 1,
+                    "status": "vacant",
+                    "bbox": None,
+                    "predicted_class": "empty_seat",
+                    "confidence": 0.0
+                })
+            with self.lock:
+                self.seat_status = mapped_seats
+            self.draw_visualizations(frame)
+            cv2.imshow("Seat Tracking", frame)
+            cv2.waitKey(1)
+            return frame
+        
+        except Exception as e:
+            self.logger.error(f"Error in update_detections: {e}")
+            return frame
+
+    def draw_visualizations(self, frame):
+        """
+        Draw seat bounding boxes and labels on the frame.
+        """
+        for seat in self.seat_status:
+            bbox = seat.get("bbox")
+            if bbox:
+                x1, y1, x2, y2 = bbox
+                color = (0, 0, 255) if seat["status"] == "occupied" else (0, 255, 0)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                label = f"Seat {seat['seatNumber']} : {seat['predicted_class']}"
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        total = self.seat_limit
+        occupied = len([s for s in self.seat_status if s["status"] == "occupied"])
+        vacant = total - occupied
+        cv2.putText(frame, f"Occupied: {occupied}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        cv2.putText(frame, f"Vacant: {vacant}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+    
+    def get_status(self):
+        """
+        Return a thread-safe copy of the current seat status.
+        """
+        with self.lock:
+            return self.seat_status.copy()
+
+    def close(self):
+        """
+        Cleanup operations.
+        """
+        cv2.destroyAllWindows()
+
+--------------------------------
+logger.py
+
+
+import logging
+import os
+import sys
+
+def setup_logging():
+    log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(os.path.join(log_dir, 'seat_tracker.log')),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    return logging.getLogger(__name__)
+
+--------------------------------
+config.ini
+
+import configparser
+import os
+import logging
+
+class ConfigManager:
+    def __init__(self, config_path='config.ini'):
+        self.config = configparser.ConfigParser()
+        self.logger = logging.getLogger(__name__)
+        self.defaults = {
+            'RESTAURANT_ID': '1',
+            'REST_API_BASE_URL': 'http://localhost:3001',
+            'FALLBACK_CAMERA_URL': 'http://192.168.1.8:8080/video',
+            'FRAME_SIZE': '480,480',
+            'PROCESS_EVERY_N_FRAMES': '2',
+            'MODEL_PATH': 'best.pt',
+            'SEAT_LIMIT': '4',
+            # Connection string for Postgres in the format:
+            # postgres://username:password@host:port/dbname
+            'DATABASE_URL': 'postgres://postgres:postgres@localhost/server'
+        }
+        if os.path.exists(config_path):
+            self.config.read(config_path)
+        else:
+            self.create_default_config(config_path)
+
+    def create_default_config(self, config_path):
+        self.config['DEFAULT'] = self.defaults
+        with open(config_path, 'w') as configfile:
+            self.config.write(configfile)
+
+    def get(self, key, section='DEFAULT'):
+        value = self.config.get(section, key, fallback=self.defaults.get(key))
+        if key == 'FRAME_SIZE':
+            return tuple(map(int, value.split(',')))
+        elif key in ['RESTAURANT_ID', 'PROCESS_EVERY_N_FRAMES', 'SEAT_LIMIT']:
+            try:
+                return int(value)
+            except ValueError:
+                return value
+        return value
+
+    def get_camera_url(self, owner_id):
+        from api_client import fetch_camera_url
+        return fetch_camera_url(self, owner_id)
+
+--------------------------------
+camera.py
+
+
+import cv2
+import threading
+import time
+from queue import Queue
+import logging
+
+class CaptureThread(threading.Thread):
+    def __init__(self, ip_camera_url, config):
+        super().__init__()
+        self.config = config
+        self.frame_size = config.get('FRAME_SIZE')
+        self.process_every_n_frames = config.get('PROCESS_EVERY_N_FRAMES')
+        self.cap = cv2.VideoCapture(ip_camera_url, cv2.CAP_FFMPEG)
+        self.frame_queue = Queue(maxsize=2)
+        self.running = True
+        self.frame_count = 0
+        self.logger = logging.getLogger(__name__)
+
+    def run(self):
+        while self.running:
+            ret, frame = self.cap.read()
+            if ret:
+                frame = cv2.resize(frame, self.frame_size)
+                if self.frame_count % self.process_every_n_frames == 0:
+                    if self.frame_queue.full():
+                        self.frame_queue.get()
+                    self.frame_queue.put(frame)
+                self.frame_count += 1
+            else:
+                self.logger.warning("Failed to read frame from camera")
+                time.sleep(0.5)
+        self.cap.release()
+
+    def stop(self):
+        self.running = False
+
+
+--------------------------------
+api_client.py
+
+import requests
+import logging
+
+class APIClient:
+    def __init__(self, config):
+        self.config = config
+        self.restaurant_id = config.get('RESTAURANT_ID')
+        self.base_url = config.get('REST_API_BASE_URL')
+        self.logger = logging.getLogger(__name__)
+
+    
+
+def fetch_camera_url(config, restaurant_id):
+    """
+    Fetch the IP camera URL from the web configuration service using restaurant_id.
+    """
+    try:
+        url = f"{config.get('REST_API_BASE_URL')}/api/restaurants/ip-url/{restaurant_id}"
+        response = requests.get(url)
+        data = response.json()
+        print(data)
+        if isinstance(data, list) and len(data) > 0:
+            data = data[0]
+        return data.get('ip_camera_url', config.get('FALLBACK_CAMERA_URL'))
+    except Exception as e:
+        print("failed to fetch ip-url from the api")
+        logging.getLogger(__name__).error(f"Error fetching camera URL: {e}")
+        return config.get('FALLBACK_CAMERA_URL')
+--------------------------------
+db_manager.py
+
+import psycopg2
+import logging
+
+logger = logging.getLogger(__name__)
+
+def get_connection(conn_str):
+    """
+    Establish and return a connection to the PostgreSQL database using the provided connection string.
+    The connection string should include credentials along with host, port, and database name.
+    """
+    try:
+        connection = psycopg2.connect(conn_str)
+        logger.info("Database connection established.")
+        return connection
+    except Exception as e:
+        logger.error(f"Error connecting to the database: {e}")
+        raise
+
+def update_seats_status(seat_status, restaurant_id, conn_str):
+    """
+    Update the seats table with the latest seat statuses for a given restaurant.
+    
+    For each seat from the detection, update its status and position using centroid coordinates (if available).
+    It assumes that the seats already exist in the table.
+    Logs details for each seat that is updated.
+    """
+    try:
+        conn = get_connection(conn_str)
+        cur = conn.cursor()
+        for seat in seat_status:
+            seat_number = seat["seatNumber"]
+            status = seat["status"]
+            # Use centroid coordinates if available; otherwise, set pos_x and pos_y to NULL.
+            centroid = seat.get("centroid", (None, None))
+            pos_x, pos_y = centroid if centroid is not None else (None, None)
+            query = """
+                UPDATE seats 
+                SET status = %s, pos_x = %s, pos_y = %s 
+                WHERE restaurant_id = %s AND seat_number = %s;
+            """
+            cur.execute(query, (status, pos_x, pos_y, restaurant_id, seat_number))
+            logger.info(
+                f"Updated seat[{seat_number}]: status: {status}, pos_x: {pos_x}, pos_y: {pos_y} for restaurant_id {restaurant_id}"
+            )
+        conn.commit()
+        cur.close()
+        conn.close()
+        logger.info(f"Finished updating seat statuses for restaurant_id {restaurant_id}.")
+    except Exception as e:
+        logger.error(f"Error updating seats status: {e}")
+
+def fetch_seats_status(restaurant_id, conn_str):
+    """
+    Fetch the current status of seats for the specified restaurant.
+    Returns a list of dictionaries, one for each seat, with keys:
+      - seat_number
+      - status
+      - pos_x
+      - pos_y
+      - updated_at
+    Logs a summary including the total number of seats and each seat's number with its status.
+    """
+    try:
+        conn = get_connection(conn_str)
+        cur = conn.cursor()
+        query = """
+            SELECT seat_number, status, pos_x, pos_y, updated_at 
+            FROM seats 
+            WHERE restaurant_id = %s 
+            ORDER BY seat_number;
+        """
+        cur.execute(query, (restaurant_id,))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        results = []
+        for row in rows:
+            results.append({
+                "seat_number": row[0],
+                "status": row[1],
+                "pos_x": row[2],
+                "pos_y": row[3],
+                "updated_at": row[4]
+            })
+        
+        logger.info(f"Total seats for restaurant_id {restaurant_id}: {len(results)}")
+        for seat in results:
+            logger.info(f"seat[{seat.get('seat_number', 'unknown')}]: {seat.get('status', 'unknown')}")
+        
+        return results
+    except Exception as e:
+        logger.error(f"Error fetching seats status: {e}")
+        return []
+
+def fetch_seat_count(restaurant_id, conn_str):
+    """
+    Fetch the total seat count for the specified restaurant from the database.
+    Returns the count as an integer.
+    """
+    try:
+        conn = get_connection(conn_str)
+        cur = conn.cursor()
+        query = "SELECT COUNT(*) FROM seats WHERE restaurant_id = %s;"
+        cur.execute(query, (restaurant_id,))
+        count = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+        logger.info(f"Fetched total seat count for restaurant_id {restaurant_id}: {count}")
+        return count
+    except Exception as e:
+        logger.error(f"Error fetching seat count: {e}")
+        return 0
+--------------------------------
+ws_server.py
+
+import asyncio
+import json
+import logging
+import websockets
+from config import ConfigManager
+import db_manager
+
+logger = logging.getLogger(__name__)
+
+# Configuration
+config = ConfigManager()
+RESTAURANT_ID = config.get("RESTAURANT_ID")
+DB_CONN_STR = config.get("DATABASE_URL")
+POLL_INTERVAL = 2  # seconds
+
+# Set of currently connected WebSocket clients.
+connected_clients = set()
+
+async def broadcast_seat_status():
+    while True:
+        # Fetch the latest seat statuses from the database.
+        seats = db_manager.fetch_seats_status(RESTAURANT_ID, DB_CONN_STR)
+        message = json.dumps({"restaurant_id": RESTAURANT_ID, "seats": seats})
+        # Broadcast the update to all connected clients.
+        if connected_clients:
+            await asyncio.wait([client.send(message) for client in connected_clients])
+        await asyncio.sleep(POLL_INTERVAL)
+
+async def handler(websocket, path):
+    # Register the new client.
+    connected_clients.add(websocket)
+    logger.info("New client connected.")
+    try:
+        # Keep the connection open.
+        async for _ in websocket:
+            pass
+    except Exception as e:
+        logger.error(f"Error with client WebSocket connection: {e}")
+    finally:
+        # Unregister the client.
+        connected_clients.remove(websocket)
+        logger.info("Client disconnected.")
+
+async def main():
+    # Start the WebSocket server.
+    server = await websockets.serve(handler, "0.0.0.0", 6789)
+    logger.info("WebSocket server started on port 6789")
+    # Run the broadcaster concurrently.
+    broadcaster_task = asyncio.create_task(broadcast_seat_status())
+    await server.wait_closed()
+    await broadcaster_task
+
+if __name__ == "__main__":
+    asyncio.run(main())
+--------------------------------
+
+model_runner.py
+
+import sys
+import logging
+from config import ConfigManager
+import db_manager
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+def get_restaurant_by_ip(ip_url, db_conn_str):
+    """
+    Query the database to retrieve the restaurant's details based on the IP URL.
+    This function assumes that the restaurants table contains columns:
+    owner_id, ip_camera_url, seating_capacity.
+    """
+    try:
+        conn = db_manager.get_connection(db_conn_str)
+        cur = conn.cursor()
+        query = "SELECT owner_id, seating_capacity FROM restaurants WHERE ip_camera_url = %s;"
+        cur.execute(query, (ip_url,))
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        if result:
+            owner_id, seating_capacity = result
+            logger.info("Found restaurant details: id=%s, seating_capacity=%s", owner_id, seating_capacity)
+            return {"restaurant_id": owner_id, "seat_limit": seating_capacity}
+        else:
+            logger.error("No restaurant record found for IP_URL: %s", ip_url)
+            return None
+    except Exception as e:
+        logger.error("Error fetching restaurant details: %s", str(e))
+        return None
+
+def initialize_deep_learning_model(restaurant_config):
+    """
+    Initialize the deep learning model (or seat tracker) using restaurant-specific configuration.
+    Replace the stub below with your actual model initialization logic.
+    """
+    restaurant_id = restaurant_config.get("restaurant_id")
+    seat_limit = restaurant_config.get("seat_limit")
+    ip_url = restaurant_config.get("IP_URL")
+    logger.info("Initializing model for restaurant_id: %s, seat_limit: %s, ip_url: %s", 
+                restaurant_id, seat_limit, ip_url)
+    # TODO: Initialize your deep learning model here.
+    # For example:
+    # seat_tracker = SeatTracker(restaurant_config)
+    # return seat_tracker
+    return None
+
+if __name__ == "__main__":
+    # Load configuration using ConfigManager from config.py
+    config_manager = ConfigManager("config.ini")
+    
+    # Read values from the configuration file.
+    ip_url = config_manager.get("FALLBACK_CAMERA_URL")   # or use a key like 'IP_URL' if defined in your config.ini.
+    db_conn_str = config_manager.get("DATABASE_URL")
+    
+    if not ip_url or not db_conn_str:
+        logger.error("Both IP_URL (or FALLBACK_CAMERA_URL) and DATABASE_URL must be configured in config.ini.")
+        sys.exit(1)
+    
+    # Query the database for additional restaurant details based on the IP URL.
+    restaurant_data = get_restaurant_by_ip(ip_url, db_conn_str)
+    if restaurant_data is None:
+        logger.error("Failed to retrieve restaurant configuration. Exiting.")
+        sys.exit(1)
+    
+    # Update config with dynamic details fetched from the database.
+    config_manager.config['DEFAULT']['RESTAURANT_ID'] = str(restaurant_data["restaurant_id"])
+    config_manager.config['DEFAULT']['SEAT_LIMIT'] = str(restaurant_data["seat_limit"])
+    
+    # Merge necessary configuration values for model initialization.
+    restaurant_config = {
+        "restaurant_id": restaurant_data["restaurant_id"],
+        "seat_limit": restaurant_data["seat_limit"],
+        "IP_URL": ip_url,
+        "DATABASE_URL": db_conn_str
+    }
+    
+    # Initialize the deep learning model with the updated configuration.
+    initialize_deep_learning_model(restaurant_config)

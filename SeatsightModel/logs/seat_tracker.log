@@ -1,0 +1,19 @@
+2025-03-12 12:47:07,049 - api_client - ERROR - Error fetching camera URL: 'list' object has no attribute 'get'
+2025-03-12 12:47:07,049 - logger - INFO - Using camera URL: http://192.168.1.7:8080/video
+2025-03-12 12:47:07,071 - db_manager - INFO - Database connection established.
+2025-03-12 12:47:07,074 - db_manager - INFO - Fetched total seat count for restaurant_id 1: 0
+2025-03-12 12:47:07,074 - logger - INFO - Updating SEAT_LIMIT configuration to: 0
+2025-03-12 12:47:07,128 - SeatTracker - INFO - Detected model class: empty_seat (ID: 0)
+2025-03-12 12:47:07,128 - SeatTracker - INFO - Detected model class: person_on_seat (ID: 1)
+2025-03-12 12:47:07,553 - logger - INFO - Seat tracking system started.
+2025-03-12 12:47:07,558 - logger - INFO - Shutting down...
+2025-03-12 12:47:07,580 - logger - INFO - System shutdown complete.
+2025-03-12 12:47:43,675 - logger - INFO - Using camera URL: http://192.168.1.7:8080/video
+2025-03-12 12:47:43,688 - db_manager - INFO - Database connection established.
+2025-03-12 12:47:43,689 - db_manager - INFO - Fetched total seat count for restaurant_id 1: 0
+2025-03-12 12:47:43,690 - logger - INFO - Updating SEAT_LIMIT configuration to: 0
+2025-03-12 12:47:43,730 - SeatTracker - INFO - Detected model class: empty_seat (ID: 0)
+2025-03-12 12:47:43,730 - SeatTracker - INFO - Detected model class: person_on_seat (ID: 1)
+2025-03-12 12:47:44,027 - logger - INFO - Seat tracking system started.
+2025-03-12 12:47:44,067 - logger - INFO - Shutting down...
+2025-03-12 12:47:44,183 - logger - INFO - System shutdown complete.
