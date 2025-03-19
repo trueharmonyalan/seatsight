@@ -1,42 +1,4 @@
-# import cv2
-# import threading
-# import time
-# from queue import Queue
-# import logging
 
-# class CaptureThread(threading.Thread):
-#     def __init__(self, ip_camera_url, config):
-#         super().__init__()
-#         self.config = config
-#         self.frame_size = config.get('FRAME_SIZE')
-#         self.process_every_n_frames = config.get('PROCESS_EVERY_N_FRAMES')
-#         self.cap = cv2.VideoCapture(ip_camera_url, cv2.CAP_FFMPEG)
-#         self.frame_queue = Queue(maxsize=2)
-#         self.running = True
-#         self.frame_count = 0
-#         self.logger = logging.getLogger(__name__)
-
-#     def run(self):
-#         while self.running:
-#             ret, frame = self.cap.read()
-#             if ret:
-#                 frame = cv2.resize(frame, self.frame_size)
-#                 if self.frame_count % self.process_every_n_frames == 0:
-#                     if self.frame_queue.full():
-#                         self.frame_queue.get()
-#                     self.frame_queue.put(frame)
-#                 self.frame_count += 1
-#             else:
-#                 self.logger.warning("Failed to read frame from camera")
-#                 time.sleep(0.5)
-#         self.cap.release()
-
-#     def stop(self):
-#         self.running = False
-
-
-
-#version 2
 import cv2
 import threading
 import time

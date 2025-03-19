@@ -146,10 +146,12 @@ class RestaurantSession:
                 
         except Exception as e:
             self.logger.error(f"Error in processing loop: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
             
     def _update_database(self, seat_status):
         """
-        Update seat status in the database.
+        Update seat status and position in the database based on AI detection.
         
         Args:
             seat_status: Dictionary of seat status updates
@@ -164,14 +166,35 @@ class RestaurantSession:
             
             # Update each seat status
             for seat_id, status_info in seat_status.items():
-                # Convert status to database format (e.g., 'occupied' to 'unavailable')
-                db_status = 'unavailable' if status_info['status'] == 'occupied' else 'available'
+                # Convert status to match schema's allowed values ('vacant', 'occupied')
+                # Note that 'empty' from SeatTracker maps to 'vacant' in the database
+                db_status = 'occupied' if status_info['status'] == 'occupied' else 'vacant'
                 
-                # Update seat status in database
-                cur.execute(
-                    "UPDATE seats SET status = %s, last_updated = NOW() WHERE id = %s",
-                    (db_status, seat_id)
-                )
+                # Extract position coordinates if available
+                pos_x = status_info.get('pos_x')
+                pos_y = status_info.get('pos_y')
+                
+                # Construct the SQL update query based on available data
+                if pos_x is not None and pos_y is not None:
+                    # Update both status and position
+                    cur.execute(
+                        """
+                        UPDATE seats 
+                        SET status = %s, pos_x = %s, pos_y = %s 
+                        WHERE id = %s AND restaurant_id = %s
+                        """,
+                        (db_status, pos_x, pos_y, seat_id, self.restaurant_id)
+                    )
+                else:
+                    # Update only status if positions are not available
+                    cur.execute(
+                        """
+                        UPDATE seats 
+                        SET status = %s 
+                        WHERE id = %s AND restaurant_id = %s
+                        """,
+                        (db_status, seat_id, self.restaurant_id)
+                    )
             
             # Commit changes
             conn.commit()
@@ -180,10 +203,13 @@ class RestaurantSession:
             cur.close()
             conn.close()
             
-            self.logger.info(f"Updated {len(seat_status)} seat statuses in database")
+            self.logger.info(f"Updated {len(seat_status)} seat statuses and positions in database for restaurant {self.restaurant_id}")
             
         except Exception as e:
             self.logger.error(f"Error updating database: {e}")
+            # Log the traceback for easier debugging
+            import traceback
+            self.logger.error(traceback.format_exc())
 
 
 class RestaurantSessionManager:
