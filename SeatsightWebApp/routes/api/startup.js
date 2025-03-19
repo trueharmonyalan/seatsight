@@ -40,3 +40,4 @@ console.log("DB_PASSWORD VALUE:", process.env.DB_PASSWORD);
 app.listen(port,()=>{
     console.log(`api server is running on port ${port}`)
 })
+

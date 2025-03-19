@@ -232,7 +232,7 @@ CREATE TABLE restaurants (
 -- Seats Table (Stores current seat status and location details)
 CREATE TABLE seats (
     id SERIAL PRIMARY KEY,
-    restaurant_id INTEGER REFERENCES restaurants(owner_id) ON DELETE CASCADE,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
     seat_number INTEGER NOT NULL CHECK (seat_number > 0),
     is_booked BOOLEAN DEFAULT FALSE,
     status VARCHAR(10) CHECK (status IN ('vacant', 'occupied', 'reserved')) DEFAULT 'vacant',
