@@ -313,13 +313,289 @@ import com.example.seatsight.data.model.RealtimeSeatStatus
 import com.example.seatsight.data.model.Seat
 import com.example.seatsight.data.network.SseEventSource
 import com.example.seatsight.data.repository.HotelRepository
+import com.example.seatsight.ui.viewmodel.RealtimeSeatViewModel
+import com.example.seatsight.ui.viewmodel.RealtimeSeatViewModelFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.UUID
 
 // Define surface color for consistent UI
+
+
+/**
+ * Screen for displaying real-time seat availability using Server-Sent Events.
+ *
+// * @param hotelName The name of the hotel/restaurant to display
+// * @param restaurantId The ID of the restaurant to fetch seats for
+// * @param navController Navigation controller for screen navigation
+// */
+////@Composable
+////fun ViewSeatsScreen(
+////    hotelName: String,
+////    restaurantId: Int,
+////    navController: NavController
+////) {
+////    // Create unique identifier for this screen instance to control lifecycle
+////    val screenInstanceId = remember { UUID.randomUUID().toString() }
+////    Log.d("ViewSeatsScreen", "Screen created with ID: $screenInstanceId for restaurant: $restaurantId")
+////
+////    // Create repository instance and obtain ViewModel for regular seats
+////    val repository = remember { HotelRepository() }
+////    val viewModel = viewModel<HotelViewModel>(factory = HotelViewModelFactory(repository))
+////
+////    // State for regular seats from database
+////    val databaseSeats by viewModel.seatList.collectAsState()
+////
+////    // State for real-time seat updates
+////    val realTimeSeats = remember { mutableStateOf<List<RealtimeSeatStatus>>(emptyList()) }
+////
+////    // Flag to determine if we're using real-time data
+////    val usingRealTimeData = remember { mutableStateOf(false) }
+////
+////    // Create SSE event source for real-time updates
+////    val sseEventSource = remember { SseEventSource() }
+////
+////    // Display status for debugging
+////    val connectionStatus = remember { mutableStateOf("Initializing...") }
+////
+////    // Connection attempt tracking
+////    val connectionAttempted = remember { mutableStateOf(false) }
+////
+////    // First, fetch regular seats as a fallback
+////    LaunchedEffect(restaurantId) {
+////        Log.d("ViewSeatsScreen", "Fetching regular seats for restaurant: $restaurantId")
+////        viewModel.fetchSeats(restaurantId)
+////    }
+////
+////    // Important: Clean up connections when leaving the screen
+////    DisposableEffect(screenInstanceId) {
+////        onDispose {
+////            Log.d("ViewSeatsScreen", "Screen $screenInstanceId disposed, closing SSE connection")
+////            try {
+////                // Explicitly close the connection to prevent resource leaks
+////                sseEventSource.closeConnection()
+////
+////                // Reset state flags
+////                usingRealTimeData.value = false
+////                connectionAttempted.value = false
+////            } catch (e: Exception) {
+////                Log.e("ViewSeatsScreen", "Error during cleanup", e)
+////            }
+////        }
+////    }
+////
+////    // Establish real-time connection
+////    LaunchedEffect(screenInstanceId, restaurantId) {
+////        // Prevent multiple connection attempts
+////        if (connectionAttempted.value) {
+////            Log.d("ViewSeatsScreen", "Connection already attempted, skipping")
+////            return@LaunchedEffect
+////        }
+////
+////        connectionAttempted.value = true
+////        connectionStatus.value = "Connecting to real-time updates..."
+////
+////        try {
+////            // First ensure any existing connection is closed
+////            sseEventSource.closeConnection()
+////
+////            // Small delay to ensure server processes the previous connection close
+////            delay(500)
+////
+////            // Connect to the real-time API
+////            val serverUrl = "http://192.168.1.11:3003" // ⚠️ Replace with your actual server IP/hostname
+////            val url = "$serverUrl/api/seats/stream/$restaurantId"
+////
+////            Log.d("ViewSeatsScreen", "Connecting to SSE endpoint: $url")
+////
+////            sseEventSource.connect(url)
+////                .catch { e ->
+////                    Log.e("ViewSeatsScreen", "Error in SSE connection", e)
+////                    connectionStatus.value = "Connection error: ${e.message ?: "Unknown error"}"
+////                    usingRealTimeData.value = false
+////                }
+////                .collectLatest { eventData ->
+////                    try {
+////                        // Parse the JSON data from the SSE event
+////                        val jsonObject = JSONObject(eventData)
+////
+////                        // Check for error messages
+////                        if (jsonObject.has("error")) {
+////                            val errorMessage = jsonObject.getString("error")
+////                            Log.e("ViewSeatsScreen", "Error from server: $errorMessage")
+////                            connectionStatus.value = "Server error: $errorMessage"
+////                            return@collectLatest
+////                        }
+////
+////                        // Check for heartbeat messages
+////                        if (jsonObject.has("heartbeat")) {
+////                            Log.d("ViewSeatsScreen", "Heartbeat received from server")
+////                            return@collectLatest
+////                        }
+////
+////                        // Process seat data
+////                        if (jsonObject.has("seats")) {
+////                            val seatsArray = jsonObject.getJSONArray("seats")
+////                            val updatedSeats = mutableListOf<RealtimeSeatStatus>()
+////
+////                            for (i in 0 until seatsArray.length()) {
+////                                val seatObject = seatsArray.getJSONObject(i)
+////
+////                                // Extract seat properties
+////                                val seatId = seatObject.getInt("id")
+////                                val seatNumber = seatObject.getInt("seatNumber")
+////                                val status = seatObject.getString("status")
+////                                val isBooked = seatObject.optBoolean("isBooked", false)
+////                                val posX = seatObject.optInt("posX", 0)
+////                                val posY = seatObject.optInt("posY", 0)
+////
+////                                // Create the RealtimeSeatStatus object
+////                                val seatStatus = RealtimeSeatStatus(
+////                                    id = seatId,
+////                                    seatNumber = seatNumber,
+////                                    status = status,
+////                                    isBooked = isBooked,
+////                                    posX = posX,
+////                                    posY = posY
+////                                )
+////
+////                                updatedSeats.add(seatStatus)
+////                            }
+////
+////                            if (updatedSeats.isNotEmpty()) {
+////                                Log.d("ViewSeatsScreen", "Received update with ${updatedSeats.size} seats")
+////                                realTimeSeats.value = updatedSeats
+////                                usingRealTimeData.value = true
+////                                connectionStatus.value = "Connected to real-time updates"
+////                            }
+////                        }
+////                    } catch (e: Exception) {
+////                        Log.e("ViewSeatsScreen", "Error parsing SSE data", e)
+////                        connectionStatus.value = "Error processing data: ${e.message}"
+////                    }
+////                }
+////        } catch (e: Exception) {
+////            Log.e("ViewSeatsScreen", "Failed to connect to real-time updates", e)
+////            connectionStatus.value = "Could not connect to real-time updates: ${e.message}"
+////            usingRealTimeData.value = false
+////        }
+////    }
+////
+////    Surface(
+////        modifier = Modifier.fillMaxSize(),
+////        color = surfaceColor
+////    ) {
+////        Column(
+////            modifier = Modifier
+////                .fillMaxSize()
+////                .padding(16.dp)
+////        ) {
+////            Text(
+////                text = "Real-Time Seats in ${Uri.decode(hotelName)}",
+////                fontSize = 26.sp,
+////                fontWeight = FontWeight.Bold,
+////                textAlign = TextAlign.Center,
+////                modifier = Modifier
+////                    .fillMaxWidth()
+////                    .padding(bottom = 16.dp)
+////            )
+////
+////            // Show real-time indicator when connected
+////            if (usingRealTimeData.value) {
+////                Text(
+////                    text = "LIVE",
+////                    fontSize = 14.sp,
+////                    fontWeight = FontWeight.Bold,
+////                    color = Color.Red,
+////                    textAlign = TextAlign.Center,
+////                    modifier = Modifier
+////                        .padding(bottom = 8.dp)
+////                        .align(Alignment.CenterHorizontally)
+////                )
+////            }
+////
+////            // Display seats based on data source (real-time or database)
+////            if (usingRealTimeData.value) {
+////                // Real-time seats display
+////                if (realTimeSeats.value.isEmpty()) {
+////                    // Show loading indicator if no real-time data yet
+////                    Box(
+////                        modifier = Modifier.fillMaxSize(),
+////                        contentAlignment = Alignment.Center
+////                    ) {
+////                        Column(
+////                            horizontalAlignment = Alignment.CenterHorizontally
+////                        ) {
+////                            CircularProgressIndicator()
+////                            Spacer(modifier = Modifier.height(16.dp))
+////                            Text(
+////                                text = connectionStatus.value,
+////                                fontSize = 14.sp,
+////                                color = Color.Gray,
+////                                textAlign = TextAlign.Center
+////                            )
+////                        }
+////                    }
+////                } else {
+////                    // Display real-time seats
+////
+////                    // Status summary for real-time seats
+////                    SeatStatusSummary(realTimeSeats.value)
+////
+////                    // Seat grid for real-time seats
+////                    LazyVerticalGrid(
+////                        columns = GridCells.Fixed(4),
+////                        modifier = Modifier.fillMaxSize(),
+////                        contentPadding = PaddingValues(8.dp)
+////                    ) {
+////                        items(realTimeSeats.value) { seatStatus ->
+////                            RealtimeSeatStatusCard(seatStatus = seatStatus)
+////                        }
+////                    }
+////                }
+////            } else {
+////                // Database seats display
+////                if (databaseSeats.isEmpty()) {
+////                    // Show loading indicator if no database data yet
+////                    Box(
+////                        modifier = Modifier.fillMaxSize(),
+////                        contentAlignment = Alignment.Center
+////                    ) {
+////                        Column(
+////                            horizontalAlignment = Alignment.CenterHorizontally
+////                        ) {
+////                            CircularProgressIndicator()
+////                            Spacer(modifier = Modifier.height(16.dp))
+////                            Text(
+////                                text = "Loading seats from database...",
+////                                fontSize = 14.sp,
+////                                color = Color.Gray,
+////                                textAlign = TextAlign.Center
+////                            )
+////                        }
+////                    }
+////                } else {
+////                    // Status summary for database seats
+////                    SeatStatusSummary(databaseSeats)
+////
+////                    // Seat grid for database seats
+////                    LazyVerticalGrid(
+////                        columns = GridCells.Fixed(4),
+////                        modifier = Modifier.fillMaxSize(),
+////                        contentPadding = PaddingValues(8.dp)
+////                    ) {
+////                        items(databaseSeats) { seat ->
+////                            SeatStatusCard(seat = seat)
+////                        }
+////                    }
+////                }
+////            }
+////        }
+////    }
+////}
 
 
 /**
@@ -341,143 +617,67 @@ fun ViewSeatsScreen(
 
     // Create repository instance and obtain ViewModel for regular seats
     val repository = remember { HotelRepository() }
-    val viewModel = viewModel<HotelViewModel>(factory = HotelViewModelFactory(repository))
+    val hotelViewModel = viewModel<HotelViewModel>(factory = HotelViewModelFactory(repository))
+
+    // Create and obtain the RealtimeSeatViewModel for real-time updates
+    val realtimeSeatViewModel = viewModel<RealtimeSeatViewModel>(factory = RealtimeSeatViewModelFactory())
 
     // State for regular seats from database
-    val databaseSeats by viewModel.seatList.collectAsState()
+    val databaseSeats by hotelViewModel.seatList.collectAsState()
 
     // State for real-time seat updates
-    val realTimeSeats = remember { mutableStateOf<List<RealtimeSeatStatus>>(emptyList()) }
+    val realTimeSeats by realtimeSeatViewModel.seatStatusList.collectAsState()
+
+    // Loading state
+    val isLoading by realtimeSeatViewModel.isLoading.collectAsState()
+
+    // Error state
+    val error by realtimeSeatViewModel.error.collectAsState()
+
+    // Connection status
+    val connectionStatus by realtimeSeatViewModel.connectionStatus.collectAsState()
 
     // Flag to determine if we're using real-time data
-    val usingRealTimeData = remember { mutableStateOf(false) }
-
-    // Create SSE event source for real-time updates
-    val sseEventSource = remember { SseEventSource() }
-
-    // Display status for debugging
-    val connectionStatus = remember { mutableStateOf("Initializing...") }
-
-    // Connection attempt tracking
-    val connectionAttempted = remember { mutableStateOf(false) }
+    val usingRealTimeData = realTimeSeats.isNotEmpty()
 
     // First, fetch regular seats as a fallback
     LaunchedEffect(restaurantId) {
         Log.d("ViewSeatsScreen", "Fetching regular seats for restaurant: $restaurantId")
-        viewModel.fetchSeats(restaurantId)
+        hotelViewModel.fetchSeats(restaurantId)
     }
 
-    // Important: Clean up connections when leaving the screen
+    // Start tracking when the screen is displayed
+    LaunchedEffect(screenInstanceId, restaurantId) {
+        Log.d("ViewSeatsScreen", "Starting tracking for restaurant: $restaurantId")
+        realtimeSeatViewModel.startTracking(restaurantId)
+    }
+
+    // Important: Clean up when leaving the screen
+    // Update the DisposableEffect in ViewSeatsScreen
+
+// Important: Clean up when leaving the screen
+    // Important: Clean up when leaving the screen
     DisposableEffect(screenInstanceId) {
         onDispose {
-            Log.d("ViewSeatsScreen", "Screen $screenInstanceId disposed, closing SSE connection")
-            try {
-                // Explicitly close the connection to prevent resource leaks
-                sseEventSource.closeConnection()
+            Log.d("ViewSeatsScreen", "Screen $screenInstanceId disposed, stopping tracking")
 
-                // Reset state flags
-                usingRealTimeData.value = false
-                connectionAttempted.value = false
-            } catch (e: Exception) {
-                Log.e("ViewSeatsScreen", "Error during cleanup", e)
-            }
-        }
-    }
+            // First stop the real-time updates directly
+            realtimeSeatViewModel.stopRealtimeUpdates()
 
-    // Establish real-time connection
-    LaunchedEffect(screenInstanceId, restaurantId) {
-        // Prevent multiple connection attempts
-        if (connectionAttempted.value) {
-            Log.d("ViewSeatsScreen", "Connection already attempted, skipping")
-            return@LaunchedEffect
-        }
-
-        connectionAttempted.value = true
-        connectionStatus.value = "Connecting to real-time updates..."
-
-        try {
-            // First ensure any existing connection is closed
-            sseEventSource.closeConnection()
-
-            // Small delay to ensure server processes the previous connection close
-            delay(500)
-
-            // Connect to the real-time API
-            val serverUrl = "http://192.168.1.11:3003" // ⚠️ Replace with your actual server IP/hostname
-            val url = "$serverUrl/api/seats/stream/$restaurantId"
-
-            Log.d("ViewSeatsScreen", "Connecting to SSE endpoint: $url")
-
-            sseEventSource.connect(url)
-                .catch { e ->
-                    Log.e("ViewSeatsScreen", "Error in SSE connection", e)
-                    connectionStatus.value = "Connection error: ${e.message ?: "Unknown error"}"
-                    usingRealTimeData.value = false
-                }
-                .collectLatest { eventData ->
+            // Then initiate stop tracking request
+            // Use a completely separate mechanism to avoid cancellation issues
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                Log.d("ViewSeatsScreen", "Sending delayed stop tracking request")
+                kotlinx.coroutines.MainScope().launch {
                     try {
-                        // Parse the JSON data from the SSE event
-                        val jsonObject = JSONObject(eventData)
-
-                        // Check for error messages
-                        if (jsonObject.has("error")) {
-                            val errorMessage = jsonObject.getString("error")
-                            Log.e("ViewSeatsScreen", "Error from server: $errorMessage")
-                            connectionStatus.value = "Server error: $errorMessage"
-                            return@collectLatest
-                        }
-
-                        // Check for heartbeat messages
-                        if (jsonObject.has("heartbeat")) {
-                            Log.d("ViewSeatsScreen", "Heartbeat received from server")
-                            return@collectLatest
-                        }
-
-                        // Process seat data
-                        if (jsonObject.has("seats")) {
-                            val seatsArray = jsonObject.getJSONArray("seats")
-                            val updatedSeats = mutableListOf<RealtimeSeatStatus>()
-
-                            for (i in 0 until seatsArray.length()) {
-                                val seatObject = seatsArray.getJSONObject(i)
-
-                                // Extract seat properties
-                                val seatId = seatObject.getInt("id")
-                                val seatNumber = seatObject.getInt("seatNumber")
-                                val status = seatObject.getString("status")
-                                val isBooked = seatObject.optBoolean("isBooked", false)
-                                val posX = seatObject.optInt("posX", 0)
-                                val posY = seatObject.optInt("posY", 0)
-
-                                // Create the RealtimeSeatStatus object
-                                val seatStatus = RealtimeSeatStatus(
-                                    id = seatId,
-                                    seatNumber = seatNumber,
-                                    status = status,
-                                    isBooked = isBooked,
-                                    posX = posX,
-                                    posY = posY
-                                )
-
-                                updatedSeats.add(seatStatus)
-                            }
-
-                            if (updatedSeats.isNotEmpty()) {
-                                Log.d("ViewSeatsScreen", "Received update with ${updatedSeats.size} seats")
-                                realTimeSeats.value = updatedSeats
-                                usingRealTimeData.value = true
-                                connectionStatus.value = "Connected to real-time updates"
-                            }
-                        }
+                        // Copy the restaurant ID to avoid capturing changing value
+                        val restaurantIdCopy = restaurantId
+                        realtimeSeatViewModel.stopTracking(restaurantIdCopy)
                     } catch (e: Exception) {
-                        Log.e("ViewSeatsScreen", "Error parsing SSE data", e)
-                        connectionStatus.value = "Error processing data: ${e.message}"
+                        Log.e("ViewSeatsScreen", "Error stopping tracking", e)
                     }
                 }
-        } catch (e: Exception) {
-            Log.e("ViewSeatsScreen", "Failed to connect to real-time updates", e)
-            connectionStatus.value = "Could not connect to real-time updates: ${e.message}"
-            usingRealTimeData.value = false
+            }, 500) // Small delay to ensure other cleanup completes first
         }
     }
 
@@ -501,7 +701,7 @@ fun ViewSeatsScreen(
             )
 
             // Show real-time indicator when connected
-            if (usingRealTimeData.value) {
+            if (usingRealTimeData) {
                 Text(
                     text = "LIVE",
                     fontSize = 14.sp,
@@ -514,33 +714,41 @@ fun ViewSeatsScreen(
                 )
             }
 
-            // Display seats based on data source (real-time or database)
-            if (usingRealTimeData.value) {
-                // Real-time seats display
-                if (realTimeSeats.value.isEmpty()) {
-                    // Show loading indicator if no real-time data yet
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+            // Display loading state
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = connectionStatus,
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center
+                        )
+
+                        // Display error if any
+                        error?.let {
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = connectionStatus.value,
+                                text = it,
                                 fontSize = 14.sp,
-                                color = Color.Gray,
+                                color = Color.Red,
                                 textAlign = TextAlign.Center
                             )
                         }
                     }
-                } else {
-                    // Display real-time seats
-
+                }
+            } else {
+                // Display seats based on data source (real-time or database)
+                if (usingRealTimeData) {
                     // Status summary for real-time seats
-                    SeatStatusSummary(realTimeSeats.value)
+                    SeatStatusSummary(realTimeSeats)
 
                     // Seat grid for real-time seats
                     LazyVerticalGrid(
@@ -548,44 +756,44 @@ fun ViewSeatsScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(8.dp)
                     ) {
-                        items(realTimeSeats.value) { seatStatus ->
+                        items(realTimeSeats) { seatStatus ->
                             RealtimeSeatStatusCard(seatStatus = seatStatus)
                         }
                     }
-                }
-            } else {
-                // Database seats display
-                if (databaseSeats.isEmpty()) {
-                    // Show loading indicator if no database data yet
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Loading seats from database...",
-                                fontSize = 14.sp,
-                                color = Color.Gray,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
                 } else {
-                    // Status summary for database seats
-                    SeatStatusSummary(databaseSeats)
+                    // Database seats display
+                    if (databaseSeats.isEmpty()) {
+                        // Show loading indicator if no database data yet
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Loading seats from database...",
+                                    fontSize = 14.sp,
+                                    color = Color.Gray,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        // Status summary for database seats
+                        SeatStatusSummary(databaseSeats)
 
-                    // Seat grid for database seats
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(8.dp)
-                    ) {
-                        items(databaseSeats) { seat ->
-                            SeatStatusCard(seat = seat)
+                        // Seat grid for database seats
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(8.dp)
+                        ) {
+                            items(databaseSeats) { seat ->
+                                SeatStatusCard(seat = seat)
+                            }
                         }
                     }
                 }
