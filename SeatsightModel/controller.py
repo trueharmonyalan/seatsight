@@ -36,6 +36,7 @@ class SeatSightController:
         self.db_conn_str = db_conn_str
         self.polling_interval = polling_interval
         self.running = False
+        self.restaurant_configs = {}  # Cache restaurant configurations
         
         # Create component instances
         self.config_manager = DynamicConfigManager(db_conn_str)
@@ -63,10 +64,49 @@ class SeatSightController:
         self.session_manager.stop_all_sessions()
         
         logger.info("SeatSight controller stopped")
+
+    def register_restaurant_id(self, restaurant_id):
+        """
+        Register a restaurant ID without starting tracking.
+        Just loads and validates the configuration.
+        
+        Args:
+            restaurant_id: The restaurant ID to register
+            
+        Returns:
+            bool: True if registration was successful, False otherwise
+        """
+        try:
+            logger.info(f"Registering restaurant ID: {restaurant_id}")
+            
+            # Load restaurant configuration
+            config = self.config_manager.load_restaurant_config(restaurant_id)
+            if not config:
+                logger.error(f"Unable to load configuration for restaurant {restaurant_id}")
+                return False
+            
+            # Check if restaurant has a valid camera URL
+            if not config.get('IP_CAMERA_URL'):
+                logger.error(f"Restaurant {restaurant_id} has no camera URL. Registration failed.")
+                return False
+            
+            # Cache the configuration for future use
+            self.restaurant_configs[restaurant_id] = config
+            
+            # Set as active restaurant in the config manager
+            self.config_manager.set_active_restaurant(restaurant_id)
+            
+            logger.info(f"Successfully registered restaurant ID: {restaurant_id}")
+            return True
+                
+        except Exception as e:
+            logger.error(f"Error registering restaurant ID {restaurant_id}: {e}")
+            return False
     
     def process_restaurant_id(self, restaurant_id):
         """
         Process a new restaurant ID received from the API.
+        Loads configuration and starts tracking session.
         
         Args:
             restaurant_id: The restaurant ID to process
@@ -77,11 +117,18 @@ class SeatSightController:
         try:
             logger.info(f"Processing restaurant ID: {restaurant_id}")
             
-            # Load restaurant configuration
-            config = self.config_manager.load_restaurant_config(restaurant_id)
+            # Use cached config if available
+            config = self.restaurant_configs.get(restaurant_id)
+            
+            # If not cached, load it
             if not config:
-                logger.error(f"Unable to load configuration for restaurant {restaurant_id}")
-                return False
+                config = self.config_manager.load_restaurant_config(restaurant_id)
+                if not config:
+                    logger.error(f"Unable to load configuration for restaurant {restaurant_id}")
+                    return False
+                
+                # Cache the configuration
+                self.restaurant_configs[restaurant_id] = config
             
             # Check if restaurant has a valid camera URL
             if not config.get('IP_CAMERA_URL'):

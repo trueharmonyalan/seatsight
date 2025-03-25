@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify, Response
 import logging
 import threading
@@ -22,6 +23,10 @@ controller = None
 # Track active connections by client IP and restaurant ID
 active_connections = {}
 connection_lock = threading.Lock()
+
+# Track restaurant viewers for reference counting
+restaurant_viewers = {}
+viewer_lock = threading.Lock()
 
 @app.route('/update-restaurant', methods=['POST'])
 def update_restaurant():
@@ -49,16 +54,113 @@ def update_restaurant():
             logger.error("Controller not initialized yet")
             return jsonify({"status": "error", "message": "System not ready"}), 503
             
-        # Process the restaurant ID
-        success = controller.process_restaurant_id(int(restaurant_id))
+        # Process the restaurant ID - only register it, don't start tracking yet
+        # Just load and validate the configuration
+        success = controller.register_restaurant_id(int(restaurant_id))
         
         if success:
-            return jsonify({"status": "success", "message": f"Processing restaurant ID: {restaurant_id}"}), 200
+            return jsonify({"status": "success", "message": f"Registered restaurant ID: {restaurant_id}"}), 200
         else:
-            return jsonify({"status": "error", "message": "Failed to process restaurant ID"}), 500
+            return jsonify({"status": "error", "message": "Failed to register restaurant ID"}), 500
             
     except Exception as e:
         logger.error(f"Error processing update-restaurant request: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/start-tracking/<int:restaurant_id>', methods=['POST'])
+def start_tracking(restaurant_id):
+    """
+    Start tracking a restaurant's seat availability on demand.
+    Implements reference counting to handle multiple viewers.
+    """
+    client_id = request.remote_addr
+    logger.info(f"Request to start tracking for restaurant {restaurant_id} from {client_id}")
+    
+    # Check if controller is ready
+    global controller
+    if not controller:
+        logger.error("Controller not initialized yet")
+        return jsonify({"status": "error", "message": "System not ready"}), 503
+    
+    try:
+        with viewer_lock:
+            if restaurant_id not in restaurant_viewers:
+                restaurant_viewers[restaurant_id] = {}
+            
+            # Add this viewer to the restaurant
+            restaurant_viewers[restaurant_id][client_id] = {"timestamp": time.time()}
+            
+            viewer_count = len(restaurant_viewers[restaurant_id])
+            logger.info(f"Added viewer {client_id} for restaurant {restaurant_id}. Total viewers: {viewer_count}")
+            
+            # If this is the first viewer, start tracking
+            if viewer_count == 1:
+                logger.info(f"First viewer for restaurant {restaurant_id}, starting tracking...")
+                success = controller.process_restaurant_id(restaurant_id)
+                if not success:
+                    # If start failed, remove the viewer
+                    del restaurant_viewers[restaurant_id][client_id]
+                    if not restaurant_viewers[restaurant_id]:
+                        del restaurant_viewers[restaurant_id]
+                    return jsonify({"status": "error", "message": "Failed to start tracking"}), 500
+            
+        return jsonify({
+            "status": "success", 
+            "message": f"Tracking started for restaurant {restaurant_id}",
+            "viewers": viewer_count
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error starting tracking for restaurant {restaurant_id}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/stop-tracking/<int:restaurant_id>', methods=['POST'])
+def stop_tracking(restaurant_id):
+    """
+    Stop tracking a restaurant's seat availability when a viewer navigates away.
+    Only stops tracking when the last viewer disconnects.
+    """
+    client_id = request.remote_addr
+    logger.info(f"Request to stop tracking for restaurant {restaurant_id} from {client_id}")
+    
+    # Check if controller is ready
+    global controller
+    if not controller:
+        logger.error("Controller not initialized yet")
+        return jsonify({"status": "error", "message": "System not ready"}), 503
+    
+    try:
+        with viewer_lock:
+            if restaurant_id not in restaurant_viewers:
+                logger.warning(f"Restaurant {restaurant_id} not being tracked")
+                return jsonify({
+                    "status": "warning", 
+                    "message": f"Restaurant {restaurant_id} not being tracked"
+                }), 200
+                
+            # Remove this viewer
+            if client_id in restaurant_viewers[restaurant_id]:
+                del restaurant_viewers[restaurant_id][client_id]
+                logger.info(f"Removed viewer {client_id} for restaurant {restaurant_id}")
+            
+            # Check if this was the last viewer
+            viewer_count = len(restaurant_viewers[restaurant_id])
+            if viewer_count == 0:
+                logger.info(f"Last viewer for restaurant {restaurant_id}, stopping tracking...")
+                del restaurant_viewers[restaurant_id]
+                
+                # Find the session and stop it
+                if restaurant_id in controller.get_active_sessions():
+                    controller.session_manager.stop_session(restaurant_id)
+            
+        return jsonify({
+            "status": "success", 
+            "message": f"Tracking stopped for client {client_id}",
+            "remaining_viewers": viewer_count
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error stopping tracking for restaurant {restaurant_id}: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/status', methods=['GET'])
@@ -74,11 +176,19 @@ def status():
     with connection_lock:
         connection_count = len(active_connections)
     
+    # Include restaurant viewers in status
+    with viewer_lock:
+        tracked_restaurants = list(restaurant_viewers.keys())
+        viewers_by_restaurant = {rid: len(viewers) for rid, viewers in restaurant_viewers.items()}
+    
     return jsonify({
         "status": "ready",
         "message": "System running",
         "active_sessions": active_sessions,
-        "active_connections": connection_count
+        "active_connections": connection_count,
+        "tracked_restaurants": tracked_restaurants,
+        "viewers": viewers_by_restaurant,
+        "version": "1.0.0-trueharmonyalan-2025-03-25"
     }), 200
 
 def get_seats_from_db(restaurant_id):
@@ -127,6 +237,19 @@ def stream_seats(restaurant_id):
     client_id = request.remote_addr
     logger.info(f"New SSE connection from {client_id} for restaurant {restaurant_id}")
     
+    # Register this client as a viewer for the restaurant
+    with viewer_lock:
+        if restaurant_id not in restaurant_viewers:
+            restaurant_viewers[restaurant_id] = {}
+        
+        restaurant_viewers[restaurant_id][client_id] = {"timestamp": time.time()}
+        
+        # Check if we need to start tracking for this restaurant
+        viewer_count = len(restaurant_viewers[restaurant_id])
+        if viewer_count == 1 and controller:
+            logger.info(f"First viewer streaming restaurant {restaurant_id}, ensuring tracking is active...")
+            controller.process_restaurant_id(restaurant_id)
+    
     # Clean up closed connections
     cleanup_connections()
     
@@ -167,6 +290,11 @@ def stream_seats(restaurant_id):
                     
                     # Update timestamp to show this connection is still active
                     active_connections[connection_key]["timestamp"] = current_time
+                
+                # Also update viewer timestamp to keep the viewer active
+                with viewer_lock:
+                    if restaurant_id in restaurant_viewers and client_id in restaurant_viewers[restaurant_id]:
+                        restaurant_viewers[restaurant_id][client_id]["timestamp"] = current_time
                 
                 # Only get updates every 1 second to reduce database load
                 if current_time - last_update_time >= 1.0:
@@ -211,6 +339,23 @@ def stream_seats(restaurant_id):
                     del active_connections[connection_key]
                     logger.info(f"Removed connection {connection_key}. Remaining active: {len(active_connections)}")
             
+            # Remove the viewer registration when the connection is closed
+            with viewer_lock:
+                if restaurant_id in restaurant_viewers and client_id in restaurant_viewers[restaurant_id]:
+                    del restaurant_viewers[restaurant_id][client_id]
+                    logger.info(f"Removed viewer {client_id} for restaurant {restaurant_id}")
+                    
+                    # If this was the last viewer, stop tracking
+                    if len(restaurant_viewers[restaurant_id]) == 0:
+                        logger.info(f"Last viewer disconnected for restaurant {restaurant_id}, stopping tracking...")
+                        del restaurant_viewers[restaurant_id]
+                        
+                        # Find the session and stop it
+                        if controller:
+                            active_sessions = controller.get_active_sessions()
+                            if restaurant_id in active_sessions:
+                                controller.session_manager.stop_session(restaurant_id)
+            
             # Perform garbage collection to free resources
             gc.collect()
     
@@ -242,6 +387,41 @@ def cleanup_connections():
         if removed > 0:
             logger.info(f"Cleanup removed {removed} stale connections. Remaining active: {len(active_connections)}")
 
+def cleanup_viewers():
+    """Remove any viewers with no activity for more than 2 minutes."""
+    current_time = time.time()
+    removed = 0
+    
+    with viewer_lock:
+        for restaurant_id in list(restaurant_viewers.keys()):
+            viewers_to_remove = []
+            
+            for client_id, info in restaurant_viewers[restaurant_id].items():
+                # If no activity for 2 minutes, consider the viewer gone
+                if current_time - info["timestamp"] > 120:
+                    viewers_to_remove.append(client_id)
+            
+            # Remove inactive viewers
+            for client_id in viewers_to_remove:
+                logger.info(f"Removing inactive viewer {client_id} for restaurant {restaurant_id}")
+                del restaurant_viewers[restaurant_id][client_id]
+                removed += 1
+            
+            # If no more viewers, stop tracking
+            if not restaurant_viewers[restaurant_id] and controller:
+                logger.info(f"No more viewers for restaurant {restaurant_id}, stopping tracking...")
+                
+                # Find the session and stop it
+                active_sessions = controller.get_active_sessions()
+                if restaurant_id in active_sessions:
+                    controller.session_manager.stop_session(restaurant_id)
+                
+                # Remove empty restaurant entry
+                del restaurant_viewers[restaurant_id]
+    
+    if removed > 0:
+        logger.info(f"Cleanup removed {removed} inactive viewers")
+
 @app.before_request
 def before_request():
     """Log each request for debugging."""
@@ -265,4 +445,22 @@ def start_server(host='0.0.0.0', port=3003):
     )
     server_thread.start()
     logger.info(f"API server started on {host}:{port}")
+    
+    # Start a cleanup thread to periodically remove inactive viewers
+    cleanup_thread = threading.Thread(
+        target=periodic_cleanup,
+        daemon=True
+    )
+    cleanup_thread.start()
+    
     return server_thread
+
+def periodic_cleanup():
+    """Run cleanup functions periodically."""
+    while True:
+        try:
+            time.sleep(60)  # Run every minute
+            cleanup_connections()
+            cleanup_viewers()
+        except Exception as e:
+            logger.error(f"Error during periodic cleanup: {e}")
