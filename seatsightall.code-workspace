@@ -6,5 +6,8 @@
 		{
 			"path": "../../MeFiles/model test/SeatsightModel"
 		}
-	]
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "seatsight"
+	}
 }

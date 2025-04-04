@@ -10,7 +10,7 @@
     <%- include("partials/header.ejs") %>
 
     <div class="container">
-        <h2 class="page-title"><%= restaurantName ? restaurantName : "Unknown Restaurant" %> - Seat Booking Info</h2>
+        <h2 class="page-title" style="color: white;"><%= restaurantName ? restaurantName : "Unknown Restaurant" %> - Seat Booking Info</h2>
 
         <% if (typeof error !== "undefined" && error) { %>
             <p class="error-message"><%= error %></p>
@@ -18,14 +18,14 @@
             <p class="error-message">No restaurant found. Please register your restaurant.</p>
         <% } else { %>
 
-            <div class="seat-info-card">
+            <div class="seat-info-card" style="color: white;">
                 <h3>Booked Seats: <span class="highlight"><%= seats.bookedSeats %></span> / <span class="highlight"><%= seats.totalSeats %></span></h3>
             </div>
 
             <!-- ✅ Editable seating capacity -->
             <div class="capacity-update">
                 <form action="/update-seating" method="POST">
-                    <label for="seatingCapacity" class="form-label">Update Seating Capacity:</label>
+                    <label for="seatingCapacity" class="form-label" style="color: white;">Update Seating Capacity:</label>
                     <input type="number" name="seating_capacity" id="seatingCapacity" value="<%= restaurant.seating_capacity %>" min="1" class="form-input">
                     <button type="submit" class="btn btn-primary">Update</button>
                 </form>
@@ -36,6 +36,25 @@
             </div>
 
         <% } %>
+    </div>
+
+
+    <div class="container">
+
+        <div class="booked-info">
+            
+            <div>
+                <p>User Email:</p>
+                <p>Selected Seats:</p>
+                <p>Selected Items:</p>
+                <p>Start:</p>
+                <p>Stop:</p>
+                <p>Seat Status:</p>
+
+            </div>
+            
+        </div>
+
     </div>
 
     <%- include("partials/footer.ejs") %>

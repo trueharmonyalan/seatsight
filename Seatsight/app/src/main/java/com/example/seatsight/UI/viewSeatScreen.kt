@@ -305,6 +305,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -597,7 +600,6 @@ import java.util.UUID
 ////    }
 ////}
 
-
 /**
  * Screen for displaying real-time seat availability using Server-Sent Events.
  *
@@ -637,6 +639,9 @@ fun ViewSeatsScreen(
     // Connection status
     val connectionStatus by realtimeSeatViewModel.connectionStatus.collectAsState()
 
+    // Paused state
+    val isPaused by realtimeSeatViewModel.isPaused.collectAsState()
+
     // Flag to determine if we're using real-time data
     val usingRealTimeData = realTimeSeats.isNotEmpty()
 
@@ -647,40 +652,75 @@ fun ViewSeatsScreen(
     }
 
     // Start tracking when the screen is displayed
+    // Check if we should resume or start fresh
     LaunchedEffect(screenInstanceId, restaurantId) {
-        Log.d("ViewSeatsScreen", "Starting tracking for restaurant: $restaurantId")
-        realtimeSeatViewModel.startTracking(restaurantId)
-    }
+        Log.d("ViewSeatsScreen", "Checking whether to start or resume tracking for restaurant: $restaurantId")
 
-    // Important: Clean up when leaving the screen
-    // Update the DisposableEffect in ViewSeatsScreen
-
-// Important: Clean up when leaving the screen
-    // Important: Clean up when leaving the screen
-    DisposableEffect(screenInstanceId) {
-        onDispose {
-            Log.d("ViewSeatsScreen", "Screen $screenInstanceId disposed, stopping tracking")
-
-            // First stop the real-time updates directly
-            realtimeSeatViewModel.stopRealtimeUpdates()
-
-            // Then initiate stop tracking request
-            // Use a completely separate mechanism to avoid cancellation issues
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                Log.d("ViewSeatsScreen", "Sending delayed stop tracking request")
-                kotlinx.coroutines.MainScope().launch {
-                    try {
-                        // Copy the restaurant ID to avoid capturing changing value
-                        val restaurantIdCopy = restaurantId
-                        realtimeSeatViewModel.stopTracking(restaurantIdCopy)
-                    } catch (e: Exception) {
-                        Log.e("ViewSeatsScreen", "Error stopping tracking", e)
-                    }
-                }
-            }, 500) // Small delay to ensure other cleanup completes first
+        if (isPaused) {
+            Log.d("ViewSeatsScreen", "Resuming tracking for restaurant: $restaurantId")
+            realtimeSeatViewModel.resumeTracking(restaurantId)
+        } else {
+            Log.d("ViewSeatsScreen", "Starting fresh tracking for restaurant: $restaurantId")
+            realtimeSeatViewModel.startTracking(restaurantId)
         }
     }
 
+    // Critical change: Instead of stopping tracking, we pause it when navigating away
+    DisposableEffect(screenInstanceId) {
+        onDispose {
+            Log.d("ViewSeatsScreen", "Screen $screenInstanceId disposed, pausing tracking instead of stopping")
+
+            // Use a custom suspend function to safely pause tracking
+            // This approach avoids cancellation issues during navigation
+            val restaurantToPause = restaurantId
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                kotlinx.coroutines.MainScope().launch {
+                    try {
+                        // IMPORTANT: We pause instead of stopping the tracking
+                        realtimeSeatViewModel.pauseTracking(restaurantToPause)
+                        Log.d("ViewSeatsScreen", "Successfully requested pause for tracking: $restaurantToPause")
+                    } catch (e: Exception) {
+                        Log.e("ViewSeatsScreen", "Error pausing tracking", e)
+                    }
+                }
+            }
+        }
+    }
+
+    // Listen for lifecycle events - important for app-level pause/resume
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    // User is navigating away or app going to background
+                    Log.d("ViewSeatsScreen", "Lifecycle ON_PAUSE - pausing tracking")
+                    realtimeSeatViewModel.pauseTracking(restaurantId)
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    // User navigated back to the app from background
+                    if (isPaused) {
+                        Log.d("ViewSeatsScreen", "Lifecycle ON_RESUME - resuming tracking")
+                        realtimeSeatViewModel.resumeTracking(restaurantId)
+                    }
+                }
+                Lifecycle.Event.ON_DESTROY -> {
+                    // Final cleanup - this is important for fully stopping tracking
+                    // when the ViewModel is about to be destroyed (app exit or process death)
+                    Log.d("ViewSeatsScreen", "Lifecycle ON_DESTROY - stopping tracking")
+                    realtimeSeatViewModel.stopTracking(restaurantId)
+                }
+                else -> { /* Ignore other events */ }
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Rest of your UI code remains the same...
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = surfaceColor
@@ -801,7 +841,6 @@ fun ViewSeatsScreen(
         }
     }
 }
-
 /**
  * Shows a summary of seat availability status
  */

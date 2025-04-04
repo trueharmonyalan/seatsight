@@ -420,10 +420,15 @@ fun SeatSightApp(){
                 composable(route = bookingConfirmation.route) { backStackEntry ->
                     val hotelName = backStackEntry.arguments?.getString("hotelName") ?: ""
                     val selectedSeats = backStackEntry.arguments?.getString("selectedSeats") ?: ""
+                    val selectedMenu = backStackEntry.arguments?.getString("selectedMenu") ?: "" // ✅ Add selectedMenu
+
+                    Log.d("MainActivity", "Navigating with: hotelName=$hotelName, selectedSeats=$selectedSeats, selectedMenu=$selectedMenu") // ✅ Debugging log
+
                     bookingConfirmation.screen(
                         mapOf(
                             "hotelName" to hotelName,
-                            "selectedSeats" to selectedSeats
+                            "selectedSeats" to selectedSeats,
+                            "selectedMenu" to selectedMenu // ✅ Ensure this is passed
                         ),
                         navController
                     )

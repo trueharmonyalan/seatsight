@@ -292,6 +292,27 @@
 
 }
 
+.booked-info{
+  background-color: #D9D9D9;
+  margin-top: 40px;
+  padding: 10px;
+  height: auto;
+  width: auto;
+  border-radius: 10px ;
+  display: flex;
+  flex-direction: row; 
+  justify-content: space-between; 
+  align-items:baseline; 
+}
+
+.info-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
 .center-it-booked-info{
 
   display: flex;
