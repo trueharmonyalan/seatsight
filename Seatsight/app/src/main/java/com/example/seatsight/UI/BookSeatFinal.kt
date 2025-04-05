@@ -1,8 +1,8 @@
-
+package com.example.seatsight.UI
+import ViewModelFactory
 import android.app.TimePickerDialog
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,12 +18,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.BlendMode.Companion.Color
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -31,29 +32,60 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.example.seatsight.UI.buttonColorBook
-import com.example.seatsight.UI.surfaceColor
-import com.example.seatsight.bookingConfirmation
-import com.example.seatsight.data.model.MenuItem
+import com.example.seatsight.data.SessionManager
+import com.example.seatsight.data.repository.BookingRepository
+import com.example.seatsight.ui.viewmodel.BookingViewModel
 import java.util.Calendar
 @Composable
 fun BookingConfirmationScreen(
     hotelName: String,
     selectedSeats: Set<String>,
     selectedMenu: Map<String, Int>,
+    restaurantId: Comparable<*>,
     modifier: Modifier = Modifier,
-    onConfirm: () -> Unit = {}
+    onConfirm: () -> Unit = {},
+    viewModel: BookingViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = ViewModelFactory(BookingRepository())
+    )
 ) {
     val background = Color(android.graphics.Color.parseColor("#D9D9D9"))
     val containerColor = surfaceColor
     val showAlert = remember { mutableStateOf(false) }
     val showTimeAlert = remember { mutableStateOf(false) }
     val timeAlertMessage = remember { mutableStateOf("") } // ⚠️ Dynamic alert message
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val customerId = sessionManager.customerId.collectAsState(initial = null).value
+    val bookingResult = viewModel.bookingResult.collectAsState().value
+
+    LaunchedEffect(bookingResult) {
+        bookingResult?.let { result ->
+            result.fold(
+                onSuccess = {
+                    showAlert.value = true
+                },
+                onFailure = { error ->
+                    timeAlertMessage.value = "Booking failed: ${error.message}"
+                    showTimeAlert.value = true
+                }
+            )
+        }
+    }
+
 
     // ✅ Remember state for time selection
     val startTime = remember { mutableStateOf("") }
     val endTime = remember { mutableStateOf("") }
+
+    Log.d("customer","value:$customerId")
+    Log.d("customer","seat:$selectedSeats")
+    Log.d("customer","menu:$selectedMenu")
+    Log.d("customer","start:${startTime.value}")
+    Log.d("customer","end:${endTime.value}")
+    Log.d("customer","restaurantId:${restaurantId}")
+
+
+
 
     Surface(
         modifier = Modifier
@@ -101,7 +133,7 @@ fun BookingConfirmationScreen(
                     // **Selected Seats**
                     BookingInfoSection(title = "Selected Seats") {
                         if (selectedSeats.isEmpty()) {
-                            Text("No seats selected", fontSize = 16.sp, color = androidx.compose.ui.graphics.Color.Gray)
+                            Text("No seats selected", fontSize = 16.sp, color = Color.Gray)
                         } else {
                             Text(selectedSeats.joinToString(", "), fontSize = 16.sp)
                         }
@@ -113,7 +145,7 @@ fun BookingConfirmationScreen(
                     BookingInfoSection(title = "Selected Items") {
                         val filteredMenu = selectedMenu.filterValues { it > 0 }
                         if (filteredMenu.isEmpty()) {
-                            Text("Nothing is selected to order", fontSize = 16.sp, color = androidx.compose.ui.graphics.Color.Gray)
+                            Text("Nothing is selected to order", fontSize = 16.sp, color = Color.Gray)
                         } else {
                             Column {
                                 filteredMenu.forEach { (menuItem, quantity) ->
@@ -143,6 +175,7 @@ fun BookingConfirmationScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // **Confirm Booking Button with Smart Time Validation**
+
             Button(
                 onClick = {
                     when {
@@ -158,7 +191,22 @@ fun BookingConfirmationScreen(
                             timeAlertMessage.value = "Please select End Time."
                             showTimeAlert.value = true
                         }
-                        else -> showAlert.value = true
+                        else -> {
+                            // Call createBooking with the required parameters
+                            customerId?.let { id ->
+                                viewModel.createBooking(
+                                    customerId = id,
+                                    restaurantId = restaurantId as Int,
+                                    selectedSeats = selectedSeats,
+                                    selectedMenu = selectedMenu,
+                                    startTime = startTime.value,
+                                    endTime = endTime.value
+                                )
+                            } ?: run {
+                                timeAlertMessage.value = "Error: User not logged in"
+                                showTimeAlert.value = true
+                            }
+                        }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(buttonColorBook),
@@ -268,6 +316,7 @@ fun PreviewBookingConfirmationScreen() {
     BookingConfirmationScreen(
         hotelName = "Hotel Example",
         selectedSeats = setOf("S1", "S2"),
-        selectedMenu = mapOf()
+        selectedMenu = mapOf(),
+        restaurantId = 1,
     )
 }

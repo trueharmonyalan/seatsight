@@ -63,4 +63,5 @@ dependencies {
     implementation(libs.androidx.navigation.compose.v253)
     implementation(libs.androidx.foundation)
     implementation(libs.okhttp.sse)
+    implementation(libs.androidx.datastore.preferences)
 }

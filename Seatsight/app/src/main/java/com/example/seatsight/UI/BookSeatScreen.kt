@@ -35,7 +35,7 @@ import androidx.compose.foundation.lazy.items
 
 val buttonColorBook = Color(android.graphics.Color.parseColor("#045F1F"))
 val buttonColorBookSelected = Color(android.graphics.Color.parseColor("#41644A"))
-val seatList = listOf("S1", "S2", "S3", "S4") // More seats for better UI
+var globalRestaurantId = 0
 @Composable
 fun BookSeatScreen(
     hotelName: String,
@@ -46,6 +46,10 @@ fun BookSeatScreen(
     val containerColor = Color(android.graphics.Color.parseColor("#FFFFFF"))
     val selectedSeats = remember { mutableStateOf(setOf<Int>()) }
     val selectedItems = remember { mutableStateMapOf<MenuItem, Int>() }
+
+    globalRestaurantId = restaurantId
+
+    Log.d("BookSeatScreen", "global Restaurant ID: $globalRestaurantId")
 
     val repository = remember { HotelRepository() }
     val viewModel: HotelViewModel = viewModel(factory = HotelViewModelFactory(repository))
@@ -157,7 +161,8 @@ fun BookSeatScreen(
                 selectedSeats = selectedSeats.value.map { it.toString() }.toSet(),
                 selectedItems = selectedItems.mapKeys { it.key.name ?: "Unknown" },
                 navController = navController,
-                hotelName = hotelName
+                hotelName = hotelName,
+                restaurantId = globalRestaurantId
             )
         }
     }
@@ -238,6 +243,7 @@ fun MenuItemCard(
 ) {
     val quantity = selectedItems[menuItem] ?: 0
 
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -299,14 +305,13 @@ fun MenuItemCard(
 // **Book Button**
 @Composable
 fun ButtonForBookAndView(
-    isEnabled: Boolean, // ✅ Control enabled state
+    isEnabled: Boolean,
     selectedSeats: Set<String>,
     selectedItems: Map<String, Int>,
     navController: NavController,
-    hotelName: String
+    hotelName: String,
+    restaurantId: Int = globalRestaurantId // Add this parameter
 ) {
-
-
     Button(
         onClick = {
             val seatListString = selectedSeats.joinToString(",")
@@ -319,23 +324,22 @@ fun ButtonForBookAndView(
                 .replace("{hotelName}", hotelName)
                 .replace("{selectedSeats}", seatListString)
                 .replace("{selectedMenu}", menuListString)
+                .replace("{restaurantId}", restaurantId.toString())
 
-            Log.d("Navigation", "Final Navigation URL: $formattedRoute") // ✅ Debugging Log
+            Log.d("Navigation", "Final Navigation URL: $formattedRoute")
+            Log.d("Navigation", "Sending restaurantId: $restaurantId")
 
             navController.navigate(formattedRoute)
-
-
         },
         modifier = Modifier.height(50.dp).width(200.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isEnabled) buttonColorBook else Color.Gray
         ),
-        enabled = isEnabled // ✅ Enable only when conditions met
+        enabled = isEnabled
     ) {
         Text(text = "Confirm Booking", fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
-
 
 
 // **Preview for Testing**

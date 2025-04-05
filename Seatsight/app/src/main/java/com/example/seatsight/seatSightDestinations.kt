@@ -1,6 +1,6 @@
 package com.example.seatsight
 
-import BookingConfirmationScreen
+import com.example.seatsight.UI.BookingConfirmationScreen
 import android.util.Log
 import com.example.seatsight.UI.BookSeatWindow
 import androidx.compose.runtime.Composable
@@ -151,19 +151,21 @@ object bookSeatScreen : dynamicseatSightDestinations {
 
 
 object bookingConfirmation : dynamicseatSightDestinations {
-    override val route: String = "bookingConfirmation/{hotelName}/{selectedSeats}/{selectedMenu}"
+    override val route: String = "bookingConfirmation/{hotelName}/{selectedSeats}/{selectedMenu}/{restaurantId}"
 
     override var screen: @Composable (Map<String, String>, NavController) -> Unit = { params, navController ->
         val hotelName = params["hotelName"] ?: ""
         val selectedSeats = params["selectedSeats"]?.split(",")?.toSet() ?: emptySet()
         val selectedMenuRaw = params["selectedMenu"] ?: ""
-        Log.d("Navigation", "Raw selectedMenu before parsing: $selectedMenuRaw")
+        val restaurantId = params["restaurantId"]?.toIntOrNull() ?: 0
 
-// ✅ Correctly split using `;` instead of `,`
+        Log.d("Navigation", "Raw selectedMenu before parsing: $selectedMenuRaw")
+        Log.d("Navigation", "Restaurant ID in confirmation: $restaurantId")
+
         val selectedMenu = selectedMenuRaw.split(";").mapNotNull { item ->
             val parts = item.split(" x")
             if (parts.size == 2) {
-                parts[0].replace("_", " ").trim() to parts[1].trim().toInt() // ✅ Restore spaces
+                parts[0].replace("_", " ").trim() to parts[1].trim().toInt()
             } else null
         }.toMap()
 
@@ -171,6 +173,7 @@ object bookingConfirmation : dynamicseatSightDestinations {
             hotelName = hotelName,
             selectedSeats = selectedSeats,
             selectedMenu = selectedMenu,
+            restaurantId = restaurantId,
             onConfirm = {
                 navController.popBackStack()
             }

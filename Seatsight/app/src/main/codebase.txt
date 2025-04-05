@@ -66,7 +66,7 @@ MainActivity.kt
 
 //package com.example.seatsight
 //
-//import BookingConfirmationScreen
+//import com.example.seatsight.UI.BookingConfirmationScreen
 //import android.net.Uri
 //import android.os.Bundle
 //import android.util.Log
@@ -242,7 +242,7 @@ MainActivity.kt
 //                }
 //
 //
-//                // Navigate to BookingConfirmationScreen with selected seats
+//                // Navigate to com.example.seatsight.UI.BookingConfirmationScreen with selected seats
 //                composable(route = bookingConfirmation.route) { backStackEntry ->
 //                    val hotelName = backStackEntry.arguments?.getString("hotelName") ?: ""
 //                    val selectedSeats = backStackEntry.arguments?.getString("selectedSeats") ?: ""
@@ -357,7 +357,7 @@ MainActivity.kt
 
 package com.example.seatsight
 
-import BookingConfirmationScreen
+import com.example.seatsight.UI.BookingConfirmationScreen
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -507,7 +507,7 @@ seatSightDestinations.kt
 
 package com.example.seatsight
 
-import BookingConfirmationScreen
+import com.example.seatsight.UI.BookingConfirmationScreen
 import android.util.Log
 import com.example.seatsight.UI.BookSeatWindow
 import androidx.compose.runtime.Composable
@@ -674,7 +674,7 @@ object bookingConfirmation : dynamicseatSightDestinations {
             } else null
         }.toMap()
 
-        BookingConfirmationScreen(
+        com.example.seatsight.UI.BookingConfirmationScreen(
             hotelName = hotelName,
             selectedSeats = selectedSeats,
             selectedMenu = selectedMenu,
@@ -2726,7 +2726,7 @@ import com.example.seatsight.bookingConfirmation
 import com.example.seatsight.data.model.MenuItem
 import java.util.Calendar
 @Composable
-fun BookingConfirmationScreen(
+fun com.example.seatsight.UI.BookingConfirmationScreen(
     hotelName: String,
     selectedSeats: Set<String>,
     selectedMenu: Map<String, Int>,
@@ -2787,7 +2787,7 @@ fun BookingConfirmationScreen(
                     )
 
                     // **Selected Seats**
-                    BookingInfoSection(title = "Selected Seats") {
+                    com.example.seatsight.UI.BookingInfoSection(title = "Selected Seats") {
                         if (selectedSeats.isEmpty()) {
                             Text("No seats selected", fontSize = 16.sp, color = androidx.compose.ui.graphics.Color.Gray)
                         } else {
@@ -2798,7 +2798,7 @@ fun BookingConfirmationScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // **Ordered Items**
-                    BookingInfoSection(title = "Selected Items") {
+                    com.example.seatsight.UI.BookingInfoSection(title = "Selected Items") {
                         val filteredMenu = selectedMenu.filterValues { it > 0 }
                         if (filteredMenu.isEmpty()) {
                             Text("Nothing is selected to order", fontSize = 16.sp, color = androidx.compose.ui.graphics.Color.Gray)
@@ -2814,13 +2814,13 @@ fun BookingConfirmationScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // **Booking Time Selection**
-                    BookingInfoSection(title = "Reserved Time") {
+                    com.example.seatsight.UI.BookingInfoSection(title = "Reserved Time") {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            TimePickerButton(label = startTime.value.ifEmpty { "Select Start Time" }) {
+                            com.example.seatsight.UI.TimePickerButton(label = startTime.value.ifEmpty { "Select Start Time" }) {
                                 startTime.value = it
                             }
                             Spacer(modifier = Modifier.height(12.dp))
-                            TimePickerButton(label = endTime.value.ifEmpty { "Select End Time" }) {
+                            com.example.seatsight.UI.TimePickerButton(label = endTime.value.ifEmpty { "Select End Time" }) {
                                 endTime.value = it
                             }
                         }
@@ -2859,7 +2859,7 @@ fun BookingConfirmationScreen(
 
             // **Smart Time Selection Alert**
             if (showTimeAlert.value) {
-                AlertDialogComponent(
+                com.example.seatsight.UI.AlertDialogComponent(
                     message = timeAlertMessage.value, // ⚠️ Displays specific message
                     onDismiss = { showTimeAlert.value = false },
                     onConfirm = { showTimeAlert.value = false }
@@ -2868,7 +2868,7 @@ fun BookingConfirmationScreen(
 
             // **Booking Confirmation Alert**
             if (showAlert.value) {
-                AlertDialogComponent(
+                com.example.seatsight.UI.AlertDialogComponent(
                     message = "Your booking is confirmed! The total amount will be added to your bill.",
                     onDismiss = { showAlert.value = false },
                     onConfirm = {
@@ -2884,7 +2884,7 @@ fun BookingConfirmationScreen(
 
 
 @Composable
-fun BookingInfoSection(title: String, content: @Composable () -> Unit) {
+fun com.example.seatsight.UI.BookingInfoSection(title: String, content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -2903,7 +2903,7 @@ fun BookingInfoSection(title: String, content: @Composable () -> Unit) {
 
 
 @Composable
-fun TimePickerButton(label: String, onTimeSelected: (String) -> Unit) {
+fun com.example.seatsight.UI.TimePickerButton(label: String, onTimeSelected: (String) -> Unit) {
     val context = LocalContext.current
     val timePicker = remember { mutableStateOf(label) }
 
@@ -2936,7 +2936,7 @@ fun TimePickerButton(label: String, onTimeSelected: (String) -> Unit) {
 
 // **Reusable Alert Dialog Component**
 @Composable
-fun AlertDialogComponent(message: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun com.example.seatsight.UI.AlertDialogComponent(message: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = { onDismiss() },
         confirmButton = {
@@ -2952,8 +2952,8 @@ fun AlertDialogComponent(message: String, onDismiss: () -> Unit, onConfirm: () -
 // **Preview Composable**
 @Preview(showBackground = true)
 @Composable
-fun PreviewBookingConfirmationScreen() {
-    BookingConfirmationScreen(
+fun com.example.seatsight.UI.PreviewBookingConfirmationScreen() {
+    com.example.seatsight.UI.BookingConfirmationScreen(
         hotelName = "Hotel Example",
         selectedSeats = setOf("S1", "S2"),
         selectedMenu = mapOf()

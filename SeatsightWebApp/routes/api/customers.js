@@ -23,11 +23,38 @@ router.post("/register", async (req, res) => {
 });
 
 // ✅ Login Customer (Updated to Use `users` Table)
+// router.post("/login", async (req, res) => {
+//     const { email, password } = req.body;
+
+//     try {
+//         const result = await db.query("SELECT * FROM users WHERE email = $1 AND role = 'customer'", [email]);
+
+//         if (result.rows.length === 0) {
+//             return res.status(401).json({ error: "Customer not found" });
+//         }
+
+//         const customer = result.rows[0];
+
+//         if (await argon2.verify(customer.password, password)) {
+//             res.json({ message: "Login successful", customer_id: customer.id, email: customer.email });
+//             res.json()
+//         } else {
+//             res.status(401).json({ error: "Invalid credentials" });
+//         }
+//     } catch (err) {
+//         console.error("Login Error:", err);
+//         res.status(500).json({ error: "Login failed" });
+//     }
+// });
+
 router.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const result = await db.query("SELECT * FROM users WHERE email = $1 AND role = 'customer'", [email]);
+        const result = await db.query(
+            "SELECT * FROM users WHERE email = $1 AND role = 'customer'", 
+            [email]
+        );
 
         if (result.rows.length === 0) {
             return res.status(401).json({ error: "Customer not found" });
@@ -36,13 +63,18 @@ router.post("/login", async (req, res) => {
         const customer = result.rows[0];
 
         if (await argon2.verify(customer.password, password)) {
-            res.json({ message: "Login successful", customer_id: customer.id, email: customer.email });
+            return res.json({ 
+                message: "Login successful", 
+                customer_id: customer.id,
+                user_id: customer.id, // Added user_id
+                email: customer.email 
+            });
         } else {
-            res.status(401).json({ error: "Invalid credentials" });
+            return res.status(401).json({ error: "Invalid credentials" });
         }
     } catch (err) {
         console.error("Login Error:", err);
-        res.status(500).json({ error: "Login failed" });
+        return res.status(500).json({ error: "Login failed" });
     }
 });
 

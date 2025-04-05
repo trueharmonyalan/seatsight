@@ -1,5 +1,6 @@
 package com.example.seatsight.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.seatsight.data.repository.AuthRepository
@@ -15,11 +16,20 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
     private val _registerResult = MutableStateFlow<Result<String>?>(null)
     val registerResult: StateFlow<Result<String>?> = _registerResult
 
+    private val _customerId = MutableStateFlow<Int?>(null)
+    val customerId: StateFlow<Int?> = _customerId
+
     fun login(email: String, password: String) {
         viewModelScope.launch {
             try {
                 val response = authRepository.login(email, password)
+                Log.d("API_TEST", "Login Response: $response")
                 if (response.isSuccessful) {
+                    // Store the customer ID from the response
+                    response.body()?.let { loginResponse ->
+                        _customerId.value = loginResponse.customer_id
+                        Log.d("API_TEST", "Customer ID: ${loginResponse.customer_id}")
+                    }
                     _loginResult.value = Result.success("Login successful!")
                 } else {
                     _loginResult.value = Result.failure(Exception("Invalid credentials"))

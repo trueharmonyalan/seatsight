@@ -10,6 +10,7 @@ import menuRoutes from "./menu.js";
 import seatRoutes from "./seats.js";
 import customerRoutes from "./customers.js";
 import test from "./test.js";
+import bookings from "./bookings.js"
 
 
 const app = express()
@@ -27,6 +28,7 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/seats", seatRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/test", test);
+app.use("/api/bookings", bookings);
 
 
 console.log("DB_PASSWORD TYPE:", typeof process.env.DB_PASSWORD);

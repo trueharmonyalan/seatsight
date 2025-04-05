@@ -19,8 +19,9 @@ data class RegisterResponse(
 )
 
 // ✅ Model for API Response When Logging In
-data class LoginResponse(
+data class  LoginResponse(
     val id: Int,
+    val customer_id: Int,
     val email: String,
     val token: String
 )
@@ -28,5 +29,6 @@ data class LoginResponse(
 // ✅ User Data Model
 data class UserData(
     val id: Int,
-    val email: String
+    val email: String,
+
 )
