@@ -1,0 +1,11 @@
+# Primary requirements
+pip install flask
+pip install opencv-python
+pip install ultralytics  # For YOLO model
+pip install psycopg2     # For PostgreSQL database connection
+pip install numpy
+pip install requests
+
+# Additional recommended packages
+pip install pillow       # For image processing
+pip install python-dotenv # For environment variable management
