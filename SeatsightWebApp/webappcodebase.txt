@@ -1,0 +1,1878 @@
+-------------------------------
+server.js
+
+import express from "express";
+import env from "dotenv";
+import session from "express-session";
+
+// Import route modules
+import indexRoutes from "./routes/index.js";
+import authRoutes from "./routes/authentication.js";
+import homePageSettingcard from "./routes/homepage-settings-card.js"
+import bookedSeats from "./routes/booked-seat-info.js"
+import updateMenu from "./routes/update-menu.js"
+// Optionally import db configuration to initialize connection
+import "./config/database.js";
+
+// authentication
+import passport from "./config/passport.js";
+
+
+// // Import API routes
+// import ownerRoutes from "./routes/api/owners.js";
+// import restaurantRoutes from "./routes/api/restaurants.js";
+// import menuRoutes from "./routes/api/menu.js";
+// import seatRoutes from "./routes/api/seats.js";
+// import customerRoutes from "./routes/api/customers.js";
+
+
+
+
+env.config();
+const app = express();
+const port = process.env.APP_PORT || 3002;
+
+// session implementation
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      maxAge: 1000 * 60 * 60, // 1 hour
+    },
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true }));
+
+// Setup view engine (assuming you're using ejs)
+app.set("view engine", "ejs");
+
+//routes
+app.use("/", indexRoutes);
+app.use("/", authRoutes);
+app.use("/",homePageSettingcard)
+app.use("/",bookedSeats)
+app.use("/",updateMenu)
+
+
+
+
+
+
+
+
+app.listen(port,()=>{
+    console.log(`server is running on port ${port}`)
+})
+------------------------------
+update-menu.js
+
+import express from "express";
+import fetch from "node-fetch";
+
+const router = express.Router();
+const currentYear = new Date().getFullYear();
+
+// ✅ Authentication middleware
+const ensureAuthenticated = (req, res, next) => {
+    if (req.isAuthenticated()) return next();
+    res.redirect("/");
+};
+
+router.use(express.json());
+
+// ✅ Get menu update page (Load everything in backend)
+router.get("/menu", ensureAuthenticated, async (req, res) => {
+    try {
+        console.log("🔹 User ID:", req.user.id);
+
+        // ✅ Fetch restaurant details from API
+        const response = await fetch(`http://localhost:3001/api/restaurants/owner/${req.user.id}`);
+        const restaurantData = await response.json();
+
+        if (!response.ok || !restaurantData.id) {
+            console.error("❌ No restaurant found for owner:", req.user.id);
+            return res.render("update-menu.ejs", {
+                year: currentYear,
+                user: req.user,
+                restaurant: null,
+                menuItems: [],
+                error: "No restaurant found. Please register your restaurant first.",
+            });
+        }
+
+        const restaurant = restaurantData;
+        console.log("✅ Restaurant Found:", restaurant);
+
+        // ✅ Fetch menu items
+        const menuResponse = await fetch(`http://localhost:3001/api/menu/${restaurant.id}`);
+        const menuItems = await menuResponse.json();
+
+        if (!menuResponse.ok) {
+            console.error("❌ Failed to fetch menu items.");
+            return res.render("update-menu.ejs", {
+                year: currentYear,
+                user: req.user,
+                restaurant,
+                menuItems: [],
+                error: "Failed to load menu items.",
+            });
+        }
+
+        console.log("✅ Menu Items Found:", menuItems);
+
+        // ✅ Send data directly to frontend
+        res.render("update-menu.ejs", {
+            year: currentYear,
+            user: req.user,
+            restaurant,
+            menuItems,
+            error: null
+        });
+
+    } catch (error) {
+        console.error("❌ Menu Fetch Error:", error);
+        res.render("update-menu.ejs", {
+            year: currentYear,
+            user: req.user,
+            restaurant: null,
+            menuItems: [],
+            error: "An unexpected error occurred.",
+        });
+    }
+});
+
+// ✅ Submit menu updates from frontend (POST)
+router.post("/submit-items", ensureAuthenticated, async (req, res) => {
+    console.log("🔹 Received menu update request:", req.body);
+
+    const { items, removedItems } = req.body;
+
+    try {
+        // ✅ Get restaurant ID for owner
+        const response = await fetch(`http://localhost:3001/api/restaurants/owner/${req.user.id}`);
+        const restaurantData = await response.json();
+
+        if (!response.ok || !restaurantData.id) {
+            return res.status(404).json({ message: "No restaurant found for this owner." });
+        }
+
+        const restaurantId = restaurantData.id;
+
+        // ✅ Send updates to API
+        const apiResponse = await fetch("http://localhost:3001/api/menu/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                owner_id: req.user.id,
+                restaurant_id: restaurantId,
+                items,
+                removedItems,
+            }),
+        });
+
+        const result = await apiResponse.json();
+
+        if (!apiResponse.ok) {
+            return res.status(apiResponse.status).json(result);
+        }
+
+        console.log("✅ Menu updated successfully!");
+        res.json({ message: "Menu updated successfully!" });
+
+    } catch (error) {
+        console.error("❌ Submit Error:", error);
+        res.status(500).json({ message: "Error updating menu." });
+    }
+});
+
+export default router;
+
+
+-----------------------------
+index.js
+
+// /routes/index.js
+import express from "express";
+const router = express.Router();
+
+const currentYear = new Date().getFullYear();
+
+router.get("/", (req, res) => {
+  res.render("index.ejs", { year: currentYear });
+});
+
+router.get("/register", (req, res) => {
+  res.render("register.ejs", { year: currentYear });
+});
+
+router.get("/login", (req, res) => {
+  res.render("login.ejs", { year: currentYear });
+});
+
+// router.get("/home",(req,res)=>{
+//   res.render("home.ejs",)
+// })
+export default router;
+
+------------------------------
+homepage-settings-card.js
+
+import express from "express";
+import fetch from "node-fetch";
+
+const router = express.Router();
+const currentYear = new Date().getFullYear();
+
+const ensureAuthenticated = (req, res, next) => {
+    if (req.isAuthenticated()) return next();
+    res.redirect("/");
+};
+
+// ✅ Load Settings Page with Current IP URL
+router.get("/settings", ensureAuthenticated, async (req, res) => {
+    try {
+        const response = await fetch(`http://localhost:3001/api/restaurants/owner/${req.user.id}`);
+        const restaurantData = await response.json();
+
+        if (!response.ok) {
+            console.error("Error fetching restaurant data:", restaurantData.error);
+            return res.render("homepage-settings-card.ejs", {
+                year: currentYear,
+                info: { showFromUrlState: false, showUrl: null },
+            });
+        }
+
+        res.render("homepage-settings-card.ejs", {
+            year: currentYear,
+            info: {
+                showFromUrlState: !!restaurantData.ip_camera_url,
+                showUrl: restaurantData.ip_camera_url || "Save URL here",
+            },
+        });
+
+    } catch (error) {
+        console.error("Error loading settings:", error);
+        res.render("homepage-settings-card.ejs", {
+            year: currentYear,
+            info: { showFromUrlState: false, showUrl: "Save URL here" },
+        });
+    }
+});
+
+// ✅ Update IP Camera URL via API
+router.post("/settings", ensureAuthenticated, async (req, res) => {
+    const ipurl = req.body.ipurl;
+
+    try {
+        const response = await fetch("http://localhost:3001/api/restaurants/update-ip-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                owner_id: req.user.id,
+                ip_camera_url: ipurl,
+            }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Failed to update URL.");
+
+        res.redirect("/settings");
+
+    } catch (error) {
+        console.error("Update Error:", error);
+        res.redirect("/settings");
+    }
+});
+
+export default router;
+
+
+-------------------------------
+booked-seat-info.js
+import express from "express";
+import fetch from "node-fetch";
+
+const router = express.Router();
+const currentYear = new Date().getFullYear();
+
+const ensureAuthenticated = (req, res, next) => {
+    if (req.isAuthenticated()) return next();
+    res.redirect("/");
+};
+
+// ✅ Fetch seat info dynamically via API and render it in EJS
+router.get("/bookedInfo", ensureAuthenticated, async (req, res) => {
+    try {
+        console.log("User ID:", req.user.id);
+
+        // ✅ Fetch restaurant details using API
+        const restaurantResponse = await fetch(`http://localhost:3001/api/restaurants/owner/${req.user.id}`);
+        const restaurantData = await restaurantResponse.json();
+
+        if (!restaurantResponse.ok || !restaurantData.id) {
+            return res.render("booked-seat-info.ejs", {
+                year: currentYear,
+                restaurant: null,
+                restaurantName: null,
+                error: "No restaurant found.",
+            });
+        }
+
+        // ✅ Fetch seat status using API
+        const seatStatusResponse = await fetch(`http://localhost:3001/api/seats/status/${restaurantData.id}`);
+        const seatStatusData = await seatStatusResponse.json();
+
+        if (!seatStatusResponse.ok) {
+            return res.render("booked-seat-info.ejs", {
+                year: currentYear,
+                restaurant: restaurantData,
+                restaurantName: restaurantData.name, // ✅ Pass restaurant name
+                error: "Failed to load seat data.",
+            });
+        }
+
+        res.render("booked-seat-info.ejs", {
+            year: currentYear,
+            restaurant: restaurantData,
+            restaurantName: restaurantData.name, // ✅ Pass restaurant name
+            seats: seatStatusData, 
+        });
+
+    } catch (error) {
+        console.error("Error loading booked seat info:", error);
+        res.render("booked-seat-info.ejs", {
+            year: currentYear,
+            restaurant: null,
+            restaurantName: null,
+            error: "Failed to load data.",
+        });
+    }
+});
+
+// ✅ Update Seating Capacity (Backend-Processed API Call)
+router.post("/update-seating", ensureAuthenticated, async (req, res) => {
+    try {
+        const { seating_capacity } = req.body;
+
+        // ✅ Fetch the restaurant ID first
+        const restaurantResponse = await fetch(`http://localhost:3001/api/restaurants/owner/${req.user.id}`);
+        const restaurantData = await restaurantResponse.json();
+
+        if (!restaurantResponse.ok || !restaurantData.id) {
+            return res.status(404).json({ error: "No restaurant found for this owner." });
+        }
+
+        // ✅ Make the API call to update the seating capacity
+        const updateResponse = await fetch("http://localhost:3001/api/seats/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                restaurant_id: restaurantData.id,
+                seating_capacity
+            }).toString(),
+        });
+
+        if (!updateResponse.ok) {
+            throw new Error("Failed to update capacity.");
+        }
+
+        // ✅ Redirect instead of sending JSON response
+        res.redirect("/bookedInfo");
+
+    } catch (error) {
+        console.error("Update Error:", error);
+        res.status(500).json({ error: "Failed to update capacity." });
+    }
+});
+
+export default router;
+
+------------------------------
+authentication.js
+
+import express from "express";
+const router = express.Router();
+import argon2 from "argon2";
+import fetch from "node-fetch";
+import passport from "passport";
+
+const currentYear = new Date().getFullYear();
+
+router.get("/auth", (req, res) => {
+    if (req.isAuthenticated()) {
+        res.render("home.ejs", { year: currentYear, state: true });
+    } else {
+        res.redirect("/");
+    }
+});
+
+router.get("/logout", (req, res) => {
+    req.logout((err) => {
+        if (err) return console.error("Logout Error:", err);
+        res.redirect("/");
+    });
+});
+
+router.post("/register", async (req, res) => {
+  const { restaurant_name, username: email, password } = req.body;
+
+  if (!restaurant_name) {
+      return res.render("register.ejs", {
+          potentialError: { noRestaurantName: "Enter restaurant name." },
+          year: currentYear
+      });
+  }
+
+  if (!email) {
+      return res.render("register.ejs", {
+          potentialError: { noemailError: "Provide your email." },
+          year: currentYear
+      });
+  }
+
+  if (!password) {
+      return res.render("register.ejs", {
+          potentialError: { noPasswordError: "Provide your password." },
+          year: currentYear
+      });
+  }
+
+  try {
+      const response = await fetch("http://localhost:3001/api/owners/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ restaurant_name, email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        req.login(data.user, (err) => {
+            if (err) {
+                console.error("Auth: Error during session login:", err);
+                return res.render("register.ejs", {
+                    potentialError: { emailError: "Registration successful, but auto-login failed. Please log in manually." },
+                    year: currentYear
+                });
+            }
+            console.log("Auth: Registration successful. Redirecting to /auth");
+            res.redirect("/auth");
+        });
+    } else {
+        res.render("register.ejs", {
+            potentialError: { emailError: data.error || "Registration failed." },
+            year: currentYear
+        });
+    }
+} catch (err) {
+    console.error("Registration Error:", err);
+    res.render("register.ejs", {
+        potentialError: { emailError: "Server error. Try again later." },
+        year: currentYear
+    });
+}
+});
+
+router.post("/login", (req, res, next) => {
+  passport.authenticate("local", (err, user, info) => {
+    console.log("Auth Debug: Passport returned ->", { err, user, info });
+
+    if (err) {
+      console.error("Auth: Passport error:", err);
+      return res.render("login.ejs", {
+        potentialError: { loginError: "Server error. Try again later." },
+        year: currentYear
+      });
+    }
+
+    if (!user) {
+      console.log("Auth: Login failed -", info?.message || "No user returned");
+      return res.render("login.ejs", {
+        potentialError: { loginError: info?.message || "Invalid credentials." },
+        year: currentYear
+      });
+    }
+
+    req.logIn(user, (err) => {
+      if (err) {
+        console.error("Auth: Error during session login:", err);
+        return res.render("login.ejs", {
+          potentialError: { loginError: "Login failed." },
+          year: currentYear
+        });
+      }
+
+      console.log("Auth: Login successful - User session created:", req.session);
+      res.redirect("/auth");
+    });
+  })(req, res, next);
+});
+
+
+
+export default router;
+
+-----------------------------
+customers.js
+
+import express from "express";
+import argon2 from "argon2";
+import db from "../../config/database.js";
+
+const router = express.Router();
+
+// ✅ Register Customer (Updated to Use `users` Table)
+router.post("/register", async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const hashedPassword = await argon2.hash(password);
+        const result = await db.query(
+            "INSERT INTO users (email, password, role) VALUES ($1, $2, 'customer') RETURNING id, email",
+            [email, hashedPassword]
+        );
+
+        res.json({ message: "Customer registered successfully", customer: result.rows[0] });
+    } catch (err) {
+        console.error("Registration Error:", err);
+        res.status(500).json({ error: "Registration failed" });
+    }
+});
+
+// ✅ Login Customer (Updated to Use `users` Table)
+router.post("/login", async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const result = await db.query("SELECT * FROM users WHERE email = $1 AND role = 'customer'", [email]);
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: "Customer not found" });
+        }
+
+        const customer = result.rows[0];
+
+        if (await argon2.verify(customer.password, password)) {
+            res.json({ message: "Login successful", customer_id: customer.id, email: customer.email });
+        } else {
+            res.status(401).json({ error: "Invalid credentials" });
+        }
+    } catch (err) {
+        console.error("Login Error:", err);
+        res.status(500).json({ error: "Login failed" });
+    }
+});
+
+export default router;
+
+
+
+------------------------------
+menu.js
+
+
+import express from "express";
+import db from "../../config/database.js";
+
+const router = express.Router();
+router.use(express.json());
+
+// ✅ Fetch Menu for a Restaurant
+router.get("/:restaurant_id", async (req, res) => {
+    const { restaurant_id } = req.params;
+    console.log(`API Request: Fetching menu for restaurant_id = ${restaurant_id}`); // Debugging
+
+    try {
+        const result = await db.query(
+            "SELECT id, name, description, price FROM menu_items WHERE restaurant_id = $1",
+            [restaurant_id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "No menu found for this restaurant." });
+        }
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error("API Fetch Error:", err);
+        res.status(500).json({ message: "Failed to fetch menu" });
+    }
+});
+
+
+router.post("/update", async (req, res) => {
+    console.log("Received API request:", req.body);
+    const { owner_id, restaurant_id, items, removedItems } = req.body;
+
+    if (!owner_id || !restaurant_id || !Array.isArray(items)) {
+        return res.status(400).json({ message: "Invalid request: Missing required fields." });
+    }
+
+    try {
+        await db.query("BEGIN");
+
+        if (removedItems?.length > 0) {
+            await db.query(
+                "DELETE FROM menu_items WHERE restaurant_id = $1 AND id = ANY($2)",
+                [restaurant_id, removedItems]
+            );
+        }
+
+        for (const item of items) {
+            if (!item.name || !item.price) {
+                return res.status(400).json({ message: "Invalid item: name and price are required." });
+            }
+
+            if (item.id) {
+                await db.query(
+                    "UPDATE menu_items SET name = $1, description = $2, price = $3 WHERE id = $4 AND restaurant_id = $5",
+                    [item.name, item.description || "", item.price, item.id, restaurant_id]
+                );
+            } else {
+                await db.query(
+                    "INSERT INTO menu_items (restaurant_id, name, description, price) VALUES ($1, $2, $3, $4)",
+                    [restaurant_id, item.name, item.description || "", item.price]
+                );
+            }
+        }
+
+        await db.query("COMMIT");
+        res.json({ message: "Menu updated successfully!" });
+
+    } catch (error) {
+        await db.query("ROLLBACK");
+        console.error("Submit Error:", error);
+        res.status(500).json({ message: "Error updating menu" });
+    }
+});
+
+
+router.get("/menu/:restaurant_id", async (req, res) => {
+    const { restaurant_id } = req.params;
+
+    try {
+        const seatResults = await db.query(
+            "SELECT id AS seatId, seat_number AS seatNumber, is_booked FROM seats WHERE restaurant_id = $1",
+            [restaurant_id]
+        );
+
+        if (seatResults.rows.length === 0) {
+            return res.status(404).json({ error: "No seats found for this restaurant." });
+        }
+
+        console.log("Returning seat data:", seatResults.rows); // ✅ Log data before sending
+        res.json(seatResults.rows);
+    } catch (error) {
+        console.error("Database Error:", error);
+        res.status(500).json({ error: "Failed to fetch seat data." });
+    }
+});
+
+export default router;
+
+
+-------------------------------
+owners.js
+
+import express from "express";
+import argon2 from "argon2";
+import db from "../../config/database.js";
+
+const router = express.Router();
+router.use(express.json());
+
+router.post("/register", async (req, res) => {
+    const { email, password, restaurant_name } = req.body;  // ✅ Ensure consistency
+
+    if (!email || !password || !restaurant_name) {
+        return res.status(400).json({ error: "Email, password, and restaurant name are required." });
+    }
+
+    try {
+        await db.query("BEGIN");  // ✅ Start transaction
+
+        // ✅ Hash password and insert owner
+        const hashedPassword = await argon2.hash(password);
+        const ownerResult = await db.query(
+            "INSERT INTO users (email, password, role) VALUES ($1, $2, 'owner') RETURNING id, email",
+            [email, hashedPassword]
+        );
+
+        const ownerId = ownerResult.rows[0].id;
+
+        // ✅ Insert restaurant for the owner
+        const restaurantResult = await db.query(
+            "INSERT INTO restaurants (owner_id, name) VALUES ($1, $2) RETURNING id, name",
+            [ownerId, restaurant_name]
+        );
+
+        await db.query("COMMIT");  // ✅ Commit transaction
+
+        console.log("✅ Owner and Restaurant Registered:", {
+            user: ownerResult.rows[0],
+            restaurant: restaurantResult.rows[0],
+        });
+
+        res.json({
+            message: "Owner registered successfully",
+            user: ownerResult.rows[0],
+            restaurant: restaurantResult.rows[0],
+        });
+
+    } catch (err) {
+        await db.query("ROLLBACK");  // ❌ Rollback if an error occurs
+        console.error("❌ Registration Error:", err);
+        res.status(500).json({ error: "Registration failed" });
+    }
+});
+
+router.post("/login", async (req, res) => {
+    const { email, password } = req.body;
+
+    console.log("API Debug: Login Request ->", { email, password });
+
+    try {
+        const result = await db.query(
+            "SELECT * FROM users WHERE email = $1 AND role = 'owner'", 
+            [email]
+        );
+
+        if (result.rows.length === 0) {
+            console.log("API Debug: Owner not found");
+            return res.status(401).json({ error: "Owner not found" });
+        }
+
+        const user = result.rows[0];
+
+        console.log("API Debug: Fetched user from DB ->", user);
+
+        const isPasswordValid = await argon2.verify(user.password, password);
+        console.log("API Debug: Password verification result ->", isPasswordValid);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        res.json({
+            message: "Login successful",
+            user: { id: user.id, email: user.email }
+        });
+
+    } catch (err) {
+        console.error("API Debug: Login Error", err);
+        res.status(500).json({ error: "Login failed" });
+    }
+});
+
+
+router.get("/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query(
+            "SELECT u.id, u.email, r.id AS restaurant_id, r.name AS restaurant_name FROM users u LEFT JOIN restaurants r ON u.id = r.owner_id WHERE u.id = $1 AND u.role = 'owner'",
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            console.error(`API Error: Owner with ID ${id} not found`);
+            return res.status(404).json({ error: "Owner not found" });
+        }
+
+        console.log(`API Response:`, result.rows[0]); // ✅ Debugging
+        res.json(result.rows[0]);
+
+    } catch (err) {
+        console.error("API Error: Database error", err);
+        res.status(500).json({ error: "Database error" });
+    }
+});
+
+
+
+
+
+export default router;
+
+
+------------------------------
+restaurants.js
+
+import express from "express";
+import db from "../../config/database.js";
+
+const router = express.Router();
+
+// ✅ Fetch All Restaurants (For Web Admin)
+router.get("/", async (req, res) => {
+    try {
+        const result = await db.query("SELECT id, name, address FROM restaurants");
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Database Error:", err);
+        res.status(500).json({ error: "Failed to fetch restaurants" });
+    }
+});
+
+// ✅ Add a New Restaurant (Owner Only)
+router.post("/", async (req, res) => {
+    const { owner_id, name, ip_camera_url } = req.body;
+
+    try {
+        const result = await db.query(
+            "INSERT INTO restaurants (owner_id, name, ip_camera_url) VALUES ($1, $2, $3, $4) RETURNING id, name",
+            [owner_id, name, address, ip_camera_url]
+        );
+        res.json({ message: "Restaurant added successfully", restaurant: result.rows[0] });
+    } catch (err) {
+        console.error("Insert Error:", err);
+        res.status(500).json({ error: "Failed to add restaurant" });
+    }
+});
+
+// ✅ Fetch Restaurant Details Including IP Camera URL
+router.get("/owner/:owner_id", async (req, res) => {
+    const { owner_id } = req.params;
+
+    try {
+        const result = await db.query(
+            "SELECT id, name, ip_camera_url FROM restaurants WHERE owner_id = $1",
+            [owner_id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "No restaurant found for this owner." });
+        }
+
+        res.json(result.rows[0]);
+
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Failed to fetch restaurant data." });
+    }
+});
+
+// ✅ Update IP Camera URL
+router.post("/update-ip-url", async (req, res) => {
+    const { owner_id, ip_camera_url } = req.body;
+
+    if (!owner_id || ip_camera_url === undefined) {
+        return res.status(400).json({ error: "Invalid request: Missing required fields." });
+    }
+
+    try {
+        const updateRes = await db.query(
+            "UPDATE restaurants SET ip_camera_url = $1 WHERE owner_id = $2 RETURNING ip_camera_url",
+            [ip_camera_url, owner_id]
+        );
+
+        if (updateRes.rowCount === 0) {
+            return res.status(404).json({ error: "Restaurant not found." });
+        }
+
+        res.json({ message: "IP Camera URL updated successfully!", ip_camera_url });
+
+    } catch (error) {
+        console.error("Database Update Error:", error);
+        res.status(500).json({ error: "Failed to update IP Camera URL." });
+    }
+});
+
+// ✅ Fetch Hotel Names & Their Menu Items (For Android App)
+router.get("/android/hotels-menu", async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT r.id AS restaurant_id, r.name AS hotel_name, 
+                   json_agg(json_build_object('id', m.id, 'name', m.name, 'price', m.price)) AS menu
+            FROM restaurants r
+            LEFT JOIN menu_items m ON r.id = m.restaurant_id
+            GROUP BY r.id
+            ORDER BY r.name;
+        `);
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Database Error:", err);
+        res.status(500).json({ error: "Failed to fetch hotels and menu data." });
+    }
+});
+
+
+router.get("/ip-url/:owner_id", async (req, res) => {
+    const { owner_id } = req.params;
+    try {
+        const result = await db.query("SELECT ip_camera_url FROM restaurants WHERE owner_id = $1",[owner_id ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Database Error:", err);
+        res.status(500).json({ error: "Failed to fetch restaurants" });
+    }
+});
+
+
+export default router;
+
+-----------------------------
+seats.js
+
+import express from "express";
+import db from "../../config/database.js";
+
+const router = express.Router();
+router.use(express.json());
+
+// ✅ Fetch Current Seat Status
+router.get("/status/:restaurant_id", async (req, res) => {
+    const { restaurant_id } = req.params;
+
+    try {
+        const bookedResult = await db.query(
+            "SELECT COUNT(*) AS booked_seats FROM seats WHERE restaurant_id = $1 AND is_booked = TRUE",
+            [restaurant_id]
+        );
+
+        const totalResult = await db.query(
+            "SELECT seating_capacity FROM restaurants WHERE id = $1",
+            [restaurant_id]
+        );
+
+        if (totalResult.rows.length === 0) {
+            return res.status(404).json({ error: "Restaurant not found." });
+        }
+
+        res.json({
+            bookedSeats: parseInt(bookedResult.rows[0].booked_seats) || 0,
+            totalSeats: parseInt(totalResult.rows[0].seating_capacity) || 0
+        });
+
+    } catch (error) {
+        console.error("Database Error:", error);
+        res.status(500).json({ error: "Failed to fetch seat status." });
+    }
+});
+
+// ✅ Update Seating Capacity API
+router.post("/update", async (req, res) => {
+    const { restaurant_id, seating_capacity } = req.body;
+
+    if (!restaurant_id || !seating_capacity || seating_capacity <= 0) {
+        return res.status(400).json({ error: "Invalid request: Missing or invalid fields." });
+    }
+
+    try {
+        await db.query("BEGIN");
+
+        // ✅ Update seating capacity in the restaurants table
+        const updateRes = await db.query(
+            "UPDATE restaurants SET seating_capacity = $1 WHERE id = $2 RETURNING seating_capacity",
+            [seating_capacity, restaurant_id]
+        );
+
+        if (updateRes.rowCount === 0) {
+            await db.query("ROLLBACK");
+            return res.status(404).json({ error: "Restaurant not found." });
+        }
+
+        // ✅ Delete old seats if capacity changes
+        await db.query("DELETE FROM seats WHERE restaurant_id = $1", [restaurant_id]);
+
+        // ✅ Insert new seats based on the updated capacity
+        for (let i = 1; i <= seating_capacity; i++) {
+            await db.query(
+                "INSERT INTO seats (restaurant_id, seat_number, is_booked) VALUES ($1, $2, FALSE)",
+                [restaurant_id, i]
+            );
+        }
+
+        await db.query("COMMIT");
+        res.json({ message: "Seating capacity updated successfully!" });
+
+    } catch (error) {
+        await db.query("ROLLBACK");
+        console.error("Database Update Error:", error);
+        res.status(500).json({ error: "Failed to update capacity." });
+    }
+});
+
+
+
+// ✅ Fetch Seat List with Availability
+router.get("/:restaurant_id", async (req, res) => {
+    const { restaurant_id } = req.params;
+
+    try {
+        const seatResults = await db.query(
+            "SELECT id AS seatId, seat_number AS seatNumber, is_booked FROM seats WHERE restaurant_id = $1",
+            [restaurant_id]
+        );
+
+        if (seatResults.rows.length === 0) {
+            return res.status(404).json({ error: "No seats found for this restaurant." });
+        }
+
+        console.log("Returning seat data:", seatResults.rows); // ✅ Log data before sending
+        res.json(seatResults.rows);
+    } catch (error) {
+        console.error("Database Error:", error);
+        res.status(500).json({ error: "Failed to fetch seat data." });
+    }
+});
+
+router.get("/restaurant/:restaurant_id", async (req, res) => {
+    const { restaurant_id } = req.params;
+
+    try {
+        const seatResults = await db.query(
+            "SELECT id AS seatId, seat_number AS seatNumber, is_booked FROM seats WHERE restaurant_id = $1",
+            [restaurant_id]
+        );
+
+        if (seatResults.rows.length === 0) {
+            return res.status(404).json({ error: "No seats found for this restaurant." });
+        }
+
+        console.log("Returning seat data:", seatResults.rows); // ✅ Log data before sending
+        res.json(seatResults.rows);
+    } catch (error) {
+        console.error("Database Error:", error);
+        res.status(500).json({ error: "Failed to fetch seat data." });
+    }
+});
+
+// ✅ POST: Record new seat status updates from sensor/deep learning pipeline
+router.post("/seat_status", async (req, res) => {
+    const { restaurant_id, statuses } = req.body;
+    if (!restaurant_id || !statuses || !Array.isArray(statuses)) {
+        return res.status(400).json({ error: "Invalid request payload." });
+    }
+
+    try {
+        await db.query("BEGIN");
+        for (const statusUpdate of statuses) {
+            const { seat_id, status, timestamp } = statusUpdate;
+            if (!seat_id || !status || !["vacant", "occupied"].includes(status)) {
+                continue; // You could also return an error here for invalid entries
+            }
+            await db.query(
+                "INSERT INTO seat_status (restaurant_id, seat_id, status, timestamp) VALUES ($1, $2, $3, COALESCE($4, NOW()))",
+                [restaurant_id, seat_id, status, timestamp]
+            );
+        }
+        await db.query("COMMIT");
+        res.json({ message: "Seat status updates recorded successfully." });
+    } catch (error) {
+        await db.query("ROLLBACK");
+        console.error("Error updating seat status:", error);
+        res.status(500).json({ error: "Failed to update seat status." });
+    }
+});
+
+
+// // ✅ GET: Fetch the latest seat status for each seat in a restaurant
+// router.get("/seat_status/:restaurant_id", async (req, res) => {
+//     const { restaurant_id } = req.params;
+//     try {
+//         const query = `
+//             SELECT s.id AS seatId, s.seat_number AS seatNumber,
+//                    COALESCE(ss.status, 'vacant') AS status,
+//                    ss.timestamp
+//             FROM seats s
+//             LEFT JOIN LATERAL (
+//                 SELECT status, timestamp
+//                 FROM seat_status
+//                 WHERE seat_id = s.id
+//                 ORDER BY timestamp DESC
+//                 LIMIT 1
+//             ) ss ON true
+//             WHERE s.restaurant_id = $1
+//             ORDER BY s.seat_number
+//         `;
+//         const result = await db.query(query, [restaurant_id]);
+//         res.json(result.rows);
+//     } catch (error) {
+//         console.error("Error fetching live seat status:", error);
+//         res.status(500).json({ error: "Failed to fetch live seat status." });
+//     }
+// });
+
+
+
+
+
+
+
+
+// router.get("/seat/:owner_id", async (req, res) => {
+//     const { owner_id } = req.params;
+
+//     try {
+//         // Find the restaurant corresponding to the owner id.
+//         const restaurantQuery = "SELECT id FROM restaurants WHERE owner_id = $1";
+//         const restaurantResult = await db.query(restaurantQuery, [owner_id]);
+//         if (restaurantResult.rows.length === 0) {
+//             return res.status(404).json({ error: "Restaurant not found for this owner." });
+//         }
+//         const restaurant_id = restaurantResult.rows[0].id;
+
+//         // Fetch seats for the restaurant.
+//         const seatResults = await db.query(
+//             "SELECT id AS seatId, seat_number AS seatNumber, is_booked, status, pos_x, pos_y FROM seats WHERE restaurant_id = $1 ORDER BY seat_number",
+//             [restaurant_id]
+//         );
+//         if (seatResults.rows.length === 0) {
+//             return res.status(404).json({ error: "No seats found for this restaurant." });
+//         }
+//         res.json(seatResults.rows);
+//     } catch (error) {
+//         console.error("Error fetching seats:", error);
+//         res.status(500).json({ error: "Failed to fetch seats." });
+//     }
+// });
+
+router.get("/seat/:owner_id", async (req, res) => {
+    const { owner_id } = req.params;
+
+    try {
+        // Find the restaurant corresponding to the owner id.
+        const restaurantQuery = "SELECT id FROM restaurants WHERE owner_id = $1";
+        const restaurantResult = await db.query(restaurantQuery, [owner_id]);
+
+        if (restaurantResult.rows.length === 0) {
+            console.log(`No restaurant found for owner_id: ${owner_id}`);
+            return res.status(404).json({ error: "Restaurant not found for this owner." });
+        }
+
+        const restaurant_id = restaurantResult.rows[0].id;
+        console.log(`Fetched restaurant_id: ${restaurant_id} for owner_id: ${owner_id}`);
+
+        // Fetch seats for the restaurant.
+        const seatQuery = `
+            SELECT id AS seatId, restaurant_id, seat_number AS seatNumber, is_booked, status, pos_x, pos_y 
+            FROM seats WHERE restaurant_id = $1 ORDER BY seat_number
+        `;
+        const seatResults = await db.query(seatQuery, [restaurant_id]);
+
+        console.log(`Seats found for restaurant_id ${restaurant_id}:`, seatResults.rows);
+
+        if (seatResults.rows.length === 0) {
+            return res.status(404).json({ error: "No seats found for this restaurant." });
+        }
+
+        res.json(seatResults.rows);
+    } catch (error) {
+        console.error("Error fetching seats:", error);
+        res.status(500).json({ error: "Failed to fetch seats." });
+    }
+});
+
+
+
+
+
+
+
+router.post("/seat_status/:owner_id", async (req, res) => {
+    const { owner_id } = req.params;
+    const { statuses } = req.body;
+
+    // Input validation
+    if (!Array.isArray(statuses) || statuses.length === 0) {
+        return res.status(400).json({ error: "Invalid or empty statuses array" });
+    }
+
+    try {
+        // Validate owner and get restaurant
+        const restaurant = await db.query(
+            "SELECT id FROM restaurants WHERE owner_id = $1", 
+            [owner_id]
+        );
+        if (restaurant.rows.length === 0) {
+            return res.status(404).json({ error: "Restaurant not found" });
+        }
+        const restaurant_id = restaurant.rows[0].id;
+
+        await db.query("BEGIN");
+
+        const invalidSeats = [];
+        const validStatuses = new Set(['available', 'occupied', 'reserved']); // Example statuses
+
+        for (const statusUpdate of statuses) {
+            const { seat_number, status } = statusUpdate;
+
+            // Validate input
+            if (!Number.isInteger(seat_number) || seat_number <= 0 || !validStatuses.has(status)) {
+                invalidSeats.push({ seat_number, error: "Invalid data" });
+                continue;
+            }
+
+            // Check seat existence
+            const seat = await db.query(
+                "SELECT id FROM seats WHERE restaurant_id = $1 AND seat_number = $2",
+                [restaurant_id, seat_number]
+            );
+            if (seat.rows.length === 0) {
+                invalidSeats.push({ seat_number, error: "Seat not found" });
+                continue;
+            }
+
+            // Update seat status
+            await db.query(
+                "UPDATE seats SET status = $1 WHERE id = $2",
+                [status, seat.rows[0].id]
+            );
+
+            // Log status change
+            await db.query(
+                "INSERT INTO seat_status (seat_id, status) VALUES ($1, $2)",
+                [seat.rows[0].id, status]
+            );
+        }
+
+        if (invalidSeats.length > 0) {
+            await db.query("ROLLBACK");
+            return res.status(400).json({
+                error: "Some seats are invalid",
+                invalidSeats
+            });
+        }
+
+        await db.query("COMMIT");
+        res.json({ message: "All seat statuses updated successfully" });
+    } catch (error) {
+        await db.query("ROLLBACK");
+        console.error("Update error:", error);
+        res.status(500).json({ error: "Failed due to internal error" });
+    }
+});
+
+export default router;
+
+
+------------------------------
+
+startup.js
+
+import express from "express"
+import env from "dotenv";
+
+import "../../config/database.js";
+
+// Import API routes
+import ownerRoutes from "./owners.js";
+import restaurantRoutes from "./restaurants.js";
+import menuRoutes from "./menu.js";
+import seatRoutes from "./seats.js";
+import customerRoutes from "./customers.js";
+import test from "./test.js";
+
+
+const app = express()
+const port = process.env.API_PORT || 3001;
+env.config();
+
+app.use(express.json());
+app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true }));
+
+//API routes for web app
+app.use("/api/owners", ownerRoutes);
+app.use("/api/restaurants", restaurantRoutes);
+app.use("/api/menu", menuRoutes);
+app.use("/api/seats", seatRoutes);
+app.use("/api/customers", customerRoutes);
+app.use("/api/test", test);
+
+
+console.log("DB_PASSWORD TYPE:", typeof process.env.DB_PASSWORD);
+console.log("DB_PASSWORD VALUE:", process.env.DB_PASSWORD);
+
+
+
+
+
+
+app.listen(port,()=>{
+    console.log(`api server is running on port ${port}`)
+})
+
+-------------------------------
+test.js
+
+import express from "express";
+import argon2 from "argon2";
+import db from "../../config/database.js";
+
+const router = express.Router();
+
+
+    router.get("/tested", async (req, res) => {
+        try {
+            const result = await db.query("SELECT * FROM owners"); // ✅ Fetch all records
+            res.json({ message: "Owners fetched successfully", owners: result.rows });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: "Failed to fetch owners" });
+        }
+    });
+
+
+export default router;
+
+
+------------------------------
+passport.js
+
+
+import passport from "passport";
+import { Strategy} from "passport-local";
+import argon2 from "argon2";  // Use correct argon2 import
+import fetch from "node-fetch"; // Ensure fetch is available
+passport.use(
+  new Strategy({ usernameField: "email" }, async (email, password, done) => {
+    console.log("Passport Debug: Login attempt ->", { email, password });
+
+    if (!email) return done(null, false, { message: "Enter email" });
+    if (!password) return done(null, false, { message: "Enter password" });
+
+    try {
+      const response = await fetch("http://localhost:3001/api/owners/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      console.log("Passport Debug: API Response Status ->", response.status);
+
+      const data = await response.json();
+      console.log("Passport Debug: API Response Data ->", data);
+
+      if (!response.ok) {
+        return done(null, false, { message: data.error || "Login failed" });
+      }
+
+      if (!data.user || !data.user.id) {
+        console.error("Passport Debug: No valid user returned from API.");
+        return done(null, false, { message: "Invalid response from API" });
+      }
+
+      return done(null, { id: data.user.id, email: data.user.email });
+
+    } catch (err) {
+      console.error("Passport Debug: Error during authentication:", err);
+      return done(err);
+    }
+  })
+);
+
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/owners/${id}`);
+    const user = await response.json();
+    if (!response.ok || !user || !user.id) {
+      return done(new Error("User not found"));
+    }
+    done(null, user);
+  } catch (err) {
+    console.error("Passport: Error during deserialization:", err);
+    done(err);
+  }
+});
+
+
+export default passport;
+
+-----------------------------
+
+
+------------------------------
+
+
+
+-------------------------------
+booked-seat-info.js
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/styles.css">
+    <title>Booked Seat Info</title>
+</head>
+<body>
+    <%- include("partials/header.ejs") %>
+
+    <div class="container">
+        <h2 class="page-title"><%= restaurantName ? restaurantName : "Unknown Restaurant" %> - Seat Booking Info</h2>
+
+        <% if (typeof error !== "undefined" && error) { %>
+            <p class="error-message"><%= error %></p>
+        <% } else if (!restaurant) { %>
+            <p class="error-message">No restaurant found. Please register your restaurant.</p>
+        <% } else { %>
+
+            <div class="seat-info-card">
+                <h3>Booked Seats: <span class="highlight"><%= seats.bookedSeats %></span> / <span class="highlight"><%= seats.totalSeats %></span></h3>
+            </div>
+
+            <!-- ✅ Editable seating capacity -->
+            <div class="capacity-update">
+                <form action="/update-seating" method="POST">
+                    <label for="seatingCapacity" class="form-label">Update Seating Capacity:</label>
+                    <input type="number" name="seating_capacity" id="seatingCapacity" value="<%= restaurant.seating_capacity %>" min="1" class="form-input">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </form>
+            </div>
+
+            <div class="button-group">
+                <a href="/auth" class="btn btn-secondary">Back</a>
+            </div>
+
+        <% } %>
+    </div>
+
+    <%- include("partials/footer.ejs") %>
+</body>
+</html>
+
+------------------------------
+home.ejs
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/styles.css">
+  <title>SeatSigh pannel</title>
+</head>
+
+<body>
+  <%- include("partials/header.ejs") %>
+    <div class="center-it-home">
+
+      <div class="card" style="width: 18rem;">
+        <img src="./img/updatemenu.png" class="card-img-top" alt="...">
+        <div class="card-body">
+          <h5 class="card-title">Update menu</h5>
+          <p class="card-text">Customize your menu</p>
+          <a href="/menu" class="btn btn-primary">Go</a>
+        </div>
+      </div>
+
+      <div class="card" style="width: 18rem;">
+        <img src="./img/updatemenu.png" class="card-img-top" alt="...">
+        <div class="card-body">
+          <h5 class="card-title">Booked seats</h5>
+          <p class="card-text">See your seat booked information.</p>
+          <a href="/bookedInfo" class="btn btn-primary">Go</a>
+        </div>
+      </div>
+
+      <div class="card" style="width: 18rem;">
+        <img src="./img/updatemenu.png" class="card-img-top" alt="...">
+        <div class="card-body">
+          <h5 class="card-title">Settings</h5>
+          <p class="card-text">IP-Camera configuration</p>
+          <a href="/settings" class="btn btn-primary">Go</a>
+        </div>
+      </div>
+
+    </div>
+    <%- include("partials/footer.ejs") %>
+</body>
+
+</html>
+-----------------------------
+homepage-settings-card.ejs
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <link rel="stylesheet" href="/css/styles.css"> 
+</head>
+<body>
+    <%- include("partials/header.ejs") %>
+
+    <div class="custom-design-settings-active">
+        <div class="settings-card-active">
+            <div class="element-centering">
+                <h2 class="get-started-ui-text-color-bold">IP Camera Settings</h2>
+
+                <% if (info.showFromUrlState) { %>
+                    <!-- ✅ Fixed Image Layout -->
+                    <div class="video-container">
+                        <img src="<%= info.showUrl %>" alt="IP Camera Feed">
+                    </div>
+
+                    <p class="get-started-ui-text-color">Current URL:</p>
+                    <p class="settings-url"><%- info.showUrl %></p>
+
+                    <form method="POST" action="/settings">
+                        <div class="mb-3">
+                            <label for="ipurl" class="get-started-ui-text-color-bold">Update IP Camera URL:</label>
+                            <input type="url" class="form-control" id="ipurl" name="ipurl" value="<%= info.showUrl %>" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update</button>
+                    </form>
+
+                <% } else { %>
+                    <p class="get-started-ui-text-color">No IP Camera URL found. Please add one below.</p>
+
+                    <form method="POST" action="/settings">
+                        <div class="mb-3">
+                            <label for="ipurl" class="get-started-ui-text-color-bold">Enter IP Camera URL:</label>
+                            <input type="url" class="form-control" id="ipurl" name="ipurl" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </form>
+                <% } %>
+
+                <div class="center-it-button-ip-cam">
+                    <a href="/settings" class="btn btn-secondary">Back</a>
+                    <a href="/auth" class="btn btn-primary">Done</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include("partials/footer.ejs") %>
+</body>
+</html>
+
+
+------------------------------
+index.ejs
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/styles.css">
+    <title>Seatsight</title>
+</head>
+
+<body>
+    <%- include("partials/header.ejs") %>
+
+        <div class="center-it ">
+
+            <div class="get-started-ui">
+                <div class="element-centering">
+                    <h2 class="get-started-ui-text-color">
+                        Welcome to Seatsight
+                    </h2>
+
+                    <div>
+                        <a class="btn btn-primary" href="/register">Register</a>
+                        <a class="btn btn-primary" href="/login">Login</a>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        </div>
+
+
+
+
+        <%- include("partials/footer.ejs") %>
+</body>
+
+</html>
+
+
+
+-------------------------------
+login.ejs
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/styles.css">
+    <title>Seatsight Login</title>
+</head>
+
+<body>
+    <%- include("partials/header.ejs") %>
+
+    <div class="center-it">
+        <div class="get-started-ui-register-login element-centering">
+            <div>
+                <h2 class="get-started-ui-text-color">
+                    Welcome to Seatsight
+                </h2>
+
+                <form action="/login" method="POST">
+                    <h3 class="get-started-ui-text-color-bold">Login</h3>
+
+                    <!-- Email Input -->
+                    <div class="mb-3">
+                        <label for="email" class="get-started-ui-text-color">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+
+                    <!-- Password Input -->
+                    <div class="mb-3">
+                        <label for="password" class="get-started-ui-text-color">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary">Done</button>
+                </form>
+
+                <!-- ✅ Show Errors Properly -->
+                <% if (locals.potentialError) { %>
+                    <% if (potentialError.noemailError) { %>
+                        <label style="color: #E52020;"><%= potentialError.noemailError %></label>
+                    <% } %>
+                    
+                    <% if (potentialError.noPasswordError) { %>
+                        <label style="color: #E52020;"><%= potentialError.noPasswordError %></label>
+                    <% } %>
+
+                    <% if (potentialError.emailError) { %>
+                        <label style="color: #E52020;"><%= potentialError.emailError %></label>
+                    <% } %>
+
+                    <% if (potentialError.loginError) { %>
+                        <label style="color: #E52020;"><%= potentialError.loginError %></label>
+                    <% } %>
+                <% } %>
+
+            </div>
+        </div>
+    </div>
+
+    <%- include("partials/footer.ejs") %>
+
+</body>
+
+</html>
+
+
+
+------------------------------
+register.ejs
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/styles.css">
+    <title>Seatsight Register</title>
+</head>
+<body>
+    <%- include("partials/header.ejs") %>
+
+    <div class="center-it">
+        <div class="get-started-ui-register-login element-centering">
+            <div>
+                <h2 class="get-started-ui-text-color">Welcome to Seatsight</h2>
+                <form action="/register" method="POST">
+                    <h3 class="get-started-ui-text-color-bold">Register</h3>
+                    
+                    <!-- ✅ Restaurant Name Field -->
+                    <div class="mb-3">
+                        <label for="restaurantName" class="get-started-ui-text-color">Restaurant Name</label>
+                        <input type="text" class="form-control" id="restaurantName" name="restaurant_name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="exampleInputEmail1" class="get-started-ui-text-color">Email</label>
+                        <input type="email" class="form-control" id="exampleInputEmail1" name="username" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="exampleInputPassword1" class="get-started-ui-text-color">Password</label>
+                        <input type="password" class="form-control" id="exampleInputPassword1" name="password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Done</button>
+                </form>
+
+                <% if (locals.potentialError) { %>
+                    <% if (potentialError.noRestaurantName) { %>
+                        <label style="color: #E52020;"><%= potentialError.noRestaurantName %></label>
+                    <% } %>
+                    <% if (potentialError.noemailError) { %>
+                        <label style="color: #E52020;"><%= potentialError.noemailError %></label>
+                    <% } %>
+                    <% if (potentialError.emailError) { %>
+                        <label style="color: #E52020;"><%= potentialError.emailError %></label>
+                    <% } %>
+                    <% if (potentialError.noPasswordError) { %>
+                        <label style="color: #E52020;"><%= potentialError.noPasswordError %></label>
+                    <% } %>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <%- include("partials/footer.ejs") %>
+</body>
+</html>
+
+
+-----------------------------
+update-menu.ejs
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update Menu</title>
+</head>
+<body>
+    <%- include("partials/header.ejs") %>
+
+    <div class="container">
+        <h2 style="color: #D9D9D9;">Menu Items</h2>
+
+        <% if (!restaurant) { %>
+            <p style="color: red;">No restaurant found. Please register your restaurant.</p>
+        <% } else { %>
+
+        <form id="itemForm">
+            <div id="itemContainer">
+                <% if (menuItems.length === 0) { %>
+                    <p id="noItemsMessage" style="color: #D9D9D9;">No menu items found. Add new items.</p>
+                <% } else { %>
+                    <% menuItems.forEach(item => { %>
+                        <div class="item" data-id="<%= item.id %>">
+                            <input type="text" value="<%= item.name %>" required>
+                            <textarea required><%= item.description %></textarea>
+                            <input type="number" value="<%= item.price %>" step="0.01" required>
+                            <button type="button" onclick="toggleEdit(this)" class="btn btn-dark">Done</button>
+                            <button type="button" onclick="removeItem(this)" class="btn btn-danger">Remove</button>
+                        </div>
+                    <% }); %>
+                <% } %>
+            </div>
+
+            <div id="buttonContainer">
+                <button type="button" onclick="addItem()" id="addItemBtn" class="btn btn-light">Add Item</button>
+                <button type="button" onclick="window.location.href='/auth'" id="backBtn" class="btn btn-light">Back</button>
+                <input type="submit" id="submitBtn" class="btn btn-primary" value="Save Changes">
+            </div>
+        </form>
+        <div id="message"></div>
+
+        <% } %>
+    </div>
+
+    <%- include("partials/footer.ejs") %>
+
+    <script>
+        let removedItems = [];
+        let ownerId = "<%= user.id %>";
+        let restaurantId = "<%= restaurant.id %>";
+
+        function addItem() {
+            const container = document.getElementById("itemContainer");
+            const noItemsMessage = document.getElementById("noItemsMessage");
+
+            if (noItemsMessage) {
+                noItemsMessage.style.display = "none";
+            }
+
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "item";
+            itemDiv.dataset.id = "";
+
+            itemDiv.innerHTML = `
+                <input type="text" placeholder="Item Name" required>
+                <textarea placeholder="Item Description" required></textarea>
+                <input type="number" placeholder="Price" step="0.01" required>
+                <button type="button" onclick="toggleEdit(this)" class="btn btn-dark">Done</button>
+                <button type="button" onclick="removeItem(this)" class="btn btn-danger">Remove</button>
+            `;
+
+            container.appendChild(itemDiv);
+        }
+
+        function toggleEdit(button) {
+            const item = button.closest(".item");
+            const inputs = item.querySelectorAll("input, textarea");
+
+            if (inputs[0].disabled) {
+                inputs.forEach(input => input.disabled = false);
+                button.textContent = "Save";
+            } else {
+                if (!inputs[0].value.trim() || !inputs[1].value.trim() || isNaN(inputs[2].value) || inputs[2].value <= 0) {
+                    alert("Please fill in all fields correctly.");
+                    return;
+                }
+                inputs.forEach(input => input.disabled = true);
+                button.textContent = "Edit";
+            }
+        }
+
+        function removeItem(button) {
+            const item = button.closest(".item");
+            const id = item.dataset.id;
+            if (id) removedItems.push(id);
+            item.remove();
+        }
+
+        document.getElementById("itemForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const items = Array.from(document.querySelectorAll(".item")).map(item => ({
+                id: item.dataset.id || null,
+                name: item.querySelector('input[type="text"]').value.trim(),
+                description: item.querySelector("textarea").value.trim(),
+                price: parseFloat(item.querySelector('input[type="number"]').value),
+            }));
+
+            const response = await fetch("/submit-items", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ owner_id: ownerId, restaurant_id: restaurantId, items, removedItems }),
+            });
+
+            const result = await response.json();
+            showMessage(result.message);
+            removedItems = [];
+            setTimeout(() => window.location.reload(), 1000);
+        });
+
+        function showMessage(text) {
+            const div = document.getElementById("message");
+            div.textContent = text;
+            setTimeout(() => div.textContent = "", 3000);
+        }
+    </script>
+</body>
+</html>
+
+
+
+------------------------------
+
+
+
