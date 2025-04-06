@@ -5,6 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/css/styles.css">
     <title>Booked Seat Info</title>
+    <style>
+        .booking-card {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .booking-list {
+            margin-top: 20px;
+        }
+        .booking-header {
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .seat-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .seat-item {
+            text-align: center;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .seat-booked {
+            background-color: rgba(255, 0, 0, 0.2);
+        }
+        .seat-vacant {
+            background-color: rgba(0, 255, 0, 0.2);
+        }
+        .no-bookings {
+            color: #ccc;
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+        }
+        .booking-info-grid {
+            display: grid;
+            grid-template-columns: 120px auto;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+        .booking-info-label {
+            font-weight: bold;
+            color: #ccc;
+        }
+        .booking-info-value {
+            color: white;
+        }
+    </style>
 </head>
 <body>
     <%- include("partials/header.ejs") %>
@@ -38,23 +91,53 @@
         <% } %>
     </div>
 
-
     <div class="container">
-
-        <div class="booked-info">
-            
-            <div>
-                <p>User Email:</p>
-                <p>Selected Seats:</p>
-                <p>Selected Items:</p>
-                <p>Start:</p>
-                <p>Stop:</p>
-                <p>Seat Status:</p>
-
+        <h3 class="booking-header" style="color: white;">Current Bookings</h3>
+        
+        <% if (bookings && bookings.length > 0) { %>
+            <div class="booking-list">
+                <% bookings.forEach(booking => { %>
+                    <div class="booking-card">
+                        <div class="booking-info-grid">
+                            <div class="booking-info-label">User Email:</div>
+                            <div class="booking-info-value"><%= booking.customerEmail %></div>
+                            
+                            <div class="booking-info-label">Selected Seats:</div>
+                            <div class="booking-info-value"><%= booking.selectedSeats %></div>
+                            
+                            <div class="booking-info-label">Selected Items:</div>
+                            <div class="booking-info-value"><%= booking.selectedMenuItems || "None" %></div>
+                            
+                            <div class="booking-info-label">Start Time:</div>
+                            <div class="booking-info-value"><%= booking.startTime %></div>
+                            
+                            <div class="booking-info-label">End Time:</div>
+                            <div class="booking-info-value"><%= booking.endTime %></div>
+                            
+                            <div class="booking-info-label">Status:</div>
+                            <div class="booking-info-value"><%= booking.bookingStatus %></div>
+                           
+                        </div>
+                    </div>
+                <% }) %>
             </div>
-            
+        <% } else { %>
+            <div class="no-bookings">No current bookings found.</div>
+        <% } %>
+        
+        <h3 class="booking-header" style="color: white; margin-top: 30px;">All Seats</h3>
+        <div class="seat-details">
+            <% if (allSeats && allSeats.length > 0) { %>
+                <% allSeats.forEach(seat => { %>
+                    <div class="seat-item <%= seat.is_booked ? 'seat-booked' : 'seat-vacant' %>">
+                        Seat <%= seat.seat_number %><br>
+                        <small><%= seat.is_booked ? 'Booked' : 'Vacant' %></small>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <div class="no-bookings">No seat information available.</div>
+            <% } %>
         </div>
-
     </div>
 
     <%- include("partials/footer.ejs") %>
