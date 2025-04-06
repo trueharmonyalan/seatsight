@@ -1,33 +1,34 @@
 package com.example.seatsight.data.model
 
-/**
- * Model for real-time seat status updates from the deep learning model.
- * This is separate from the main Seat model to avoid conflicts.
- */
+import androidx.compose.ui.graphics.Color
+
 data class RealtimeSeatStatus(
     val id: Int,
     val seatNumber: Int,
-    val status: String, // "vacant" or "occupied"
+    val status: String,
     val isBooked: Boolean,
-    val posX: Int,
-    val posY: Int
+    val posX: Int = 0,
+    val posY: Int = 0
 ) {
-    /**
-     * Check if the seat is currently occupied based on status
-     */
-    fun isOccupied(): Boolean {
-        return status == "occupied" || isBooked
+    // Check if the seat is physically occupied based on status field
+    fun isOccupied(): Boolean = status == "occupied"
+
+    // Check if the seat is reserved through booking system
+    fun isReserved(): Boolean = isBooked && status != "occupied"
+
+    // Get status text for display
+    fun getStatusText(): String = when {
+        isBooked && status == "occupied" -> "Occupied"
+        isBooked -> "Reserved"
+        status == "occupied" -> "Occupied"
+        else -> "Vacant"
     }
 
-    /**
-     * Get the display status text
-     */
-    fun getStatusText(): String {
-        return if (isOccupied()) "Occupied" else "Available"
+    // Get color based on status
+    fun getColor(): Color = when {
+        isBooked && status == "occupied" -> Color.Red
+        isBooked -> Color.Blue
+        status == "occupied" -> Color.Red
+        else -> Color.Green
     }
-
-    /**
-     * Get the appropriate status color
-     */
-    fun getStatusColor() = if (isOccupied()) android.graphics.Color.RED else android.graphics.Color.GREEN
 }

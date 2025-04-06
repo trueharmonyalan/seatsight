@@ -62,7 +62,7 @@ router.post("/update", async (req, res) => {
         // ✅ Insert new seats based on the updated capacity
         for (let i = 1; i <= seating_capacity; i++) {
             await db.query(
-                "INSERT INTO seats (restaurant_id, seat_number, is_booked) VALUES ($1, $2, FALSE)",
+                "INSERT INTO seats (restaurant_id, seat_number, is_booked, status) VALUES ($1, $2, FALSE, 'vacant')",
                 [restaurant_id, i]
             );
         }
@@ -76,8 +76,6 @@ router.post("/update", async (req, res) => {
         res.status(500).json({ error: "Failed to update capacity." });
     }
 });
-
-
 
 // ✅ Fetch Seat List with Availability
 router.get("/:restaurant_id", async (req, res) => {
@@ -122,7 +120,7 @@ router.get("/restaurant/:restaurant_id", async (req, res) => {
     }
 });
 
-// ✅ POST: Record new seat status updates from sensor/deep learning pipeline
+// MODIFIED: Only record status in the seat_status table, don't update the seats table
 router.post("/seat_status", async (req, res) => {
     const { restaurant_id, statuses } = req.body;
     if (!restaurant_id || !statuses || !Array.isArray(statuses)) {
@@ -136,6 +134,7 @@ router.post("/seat_status", async (req, res) => {
             if (!seat_id || !status || !["vacant", "occupied"].includes(status)) {
                 continue; // You could also return an error here for invalid entries
             }
+            // Only record in seat_status table, don't modify seats table
             await db.query(
                 "INSERT INTO seat_status (restaurant_id, seat_id, status, timestamp) VALUES ($1, $2, $3, COALESCE($4, NOW()))",
                 [restaurant_id, seat_id, status, timestamp]
@@ -149,68 +148,6 @@ router.post("/seat_status", async (req, res) => {
         res.status(500).json({ error: "Failed to update seat status." });
     }
 });
-
-
-// // ✅ GET: Fetch the latest seat status for each seat in a restaurant
-// router.get("/seat_status/:restaurant_id", async (req, res) => {
-//     const { restaurant_id } = req.params;
-//     try {
-//         const query = `
-//             SELECT s.id AS seatId, s.seat_number AS seatNumber,
-//                    COALESCE(ss.status, 'vacant') AS status,
-//                    ss.timestamp
-//             FROM seats s
-//             LEFT JOIN LATERAL (
-//                 SELECT status, timestamp
-//                 FROM seat_status
-//                 WHERE seat_id = s.id
-//                 ORDER BY timestamp DESC
-//                 LIMIT 1
-//             ) ss ON true
-//             WHERE s.restaurant_id = $1
-//             ORDER BY s.seat_number
-//         `;
-//         const result = await db.query(query, [restaurant_id]);
-//         res.json(result.rows);
-//     } catch (error) {
-//         console.error("Error fetching live seat status:", error);
-//         res.status(500).json({ error: "Failed to fetch live seat status." });
-//     }
-// });
-
-
-
-
-
-
-
-
-// router.get("/seat/:owner_id", async (req, res) => {
-//     const { owner_id } = req.params;
-
-//     try {
-//         // Find the restaurant corresponding to the owner id.
-//         const restaurantQuery = "SELECT id FROM restaurants WHERE owner_id = $1";
-//         const restaurantResult = await db.query(restaurantQuery, [owner_id]);
-//         if (restaurantResult.rows.length === 0) {
-//             return res.status(404).json({ error: "Restaurant not found for this owner." });
-//         }
-//         const restaurant_id = restaurantResult.rows[0].id;
-
-//         // Fetch seats for the restaurant.
-//         const seatResults = await db.query(
-//             "SELECT id AS seatId, seat_number AS seatNumber, is_booked, status, pos_x, pos_y FROM seats WHERE restaurant_id = $1 ORDER BY seat_number",
-//             [restaurant_id]
-//         );
-//         if (seatResults.rows.length === 0) {
-//             return res.status(404).json({ error: "No seats found for this restaurant." });
-//         }
-//         res.json(seatResults.rows);
-//     } catch (error) {
-//         console.error("Error fetching seats:", error);
-//         res.status(500).json({ error: "Failed to fetch seats." });
-//     }
-// });
 
 router.get("/seat/:owner_id", async (req, res) => {
     const { owner_id } = req.params;
@@ -248,12 +185,7 @@ router.get("/seat/:owner_id", async (req, res) => {
     }
 });
 
-
-
-
-
-
-
+// MODIFIED: For AI detection - update only status field in seats table
 router.post("/seat_status/:owner_id", async (req, res) => {
     const { owner_id } = req.params;
     const { statuses } = req.body;
@@ -277,34 +209,37 @@ router.post("/seat_status/:owner_id", async (req, res) => {
         await db.query("BEGIN");
 
         const invalidSeats = [];
-        const validStatuses = new Set(['available', 'occupied', 'reserved']); // Example statuses
+        const validStatuses = new Set(['vacant', 'occupied', 'reserved']); // Example statuses
 
         for (const statusUpdate of statuses) {
             const { seat_number, status } = statusUpdate;
 
             // Validate input
-            if (!Number.isInteger(seat_number) || seat_number <= 0 || !validStatuses.has(status)) {
+            if (!seat_number || !validStatuses.has(status)) {
                 invalidSeats.push({ seat_number, error: "Invalid data" });
                 continue;
             }
 
             // Check seat existence
             const seat = await db.query(
-                "SELECT id FROM seats WHERE restaurant_id = $1 AND seat_number = $2",
+                "SELECT id, is_booked FROM seats WHERE restaurant_id = $1 AND seat_number = $2",
                 [restaurant_id, seat_number]
             );
             if (seat.rows.length === 0) {
                 invalidSeats.push({ seat_number, error: "Seat not found" });
                 continue;
             }
+            
+            // IMPORTANT: Only update status if the seat is NOT booked through the booking system
+            // This ensures that AI detection doesn't interfere with the booking system
+            if (!seat.rows[0].is_booked) {
+                await db.query(
+                    "UPDATE seats SET status = $1 WHERE id = $2",
+                    [status, seat.rows[0].id]
+                );
+            }
 
-            // Update seat status
-            await db.query(
-                "UPDATE seats SET status = $1 WHERE id = $2",
-                [status, seat.rows[0].id]
-            );
-
-            // Log status change
+            // Log status change (always log regardless of booking status)
             await db.query(
                 "INSERT INTO seat_status (seat_id, status) VALUES ($1, $2)",
                 [seat.rows[0].id, status]

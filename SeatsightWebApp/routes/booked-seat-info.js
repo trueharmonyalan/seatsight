@@ -24,6 +24,8 @@ router.get("/bookedInfo", ensureAuthenticated, async (req, res) => {
                 restaurant: null,
                 restaurantName: null,
                 error: "No restaurant found.",
+                bookings: [],
+                allSeats: []
             });
         }
 
@@ -31,12 +33,25 @@ router.get("/bookedInfo", ensureAuthenticated, async (req, res) => {
         const seatStatusResponse = await fetch(`http://localhost:3001/api/seats/status/${restaurantData.id}`);
         const seatStatusData = await seatStatusResponse.json();
 
+        // ✅ Fetch bookings data using the restaurant API endpoint
+        const bookingsResponse = await fetch(`http://localhost:3001/api/bookings/restaurant/${restaurantData.id}`);
+        let bookingsData = { bookings: [], allSeats: [] };
+        
+        if (bookingsResponse.ok) {
+            const bookingsResult = await bookingsResponse.json();
+            if (bookingsResult.success && bookingsResult.data) {
+                bookingsData = bookingsResult.data;
+            }
+        }
+
         if (!seatStatusResponse.ok) {
             return res.render("booked-seat-info.ejs", {
                 year: currentYear,
                 restaurant: restaurantData,
                 restaurantName: restaurantData.name, // ✅ Pass restaurant name
                 error: "Failed to load seat data.",
+                bookings: bookingsData.bookings || [],
+                allSeats: bookingsData.allSeats || []
             });
         }
 
@@ -44,7 +59,9 @@ router.get("/bookedInfo", ensureAuthenticated, async (req, res) => {
             year: currentYear,
             restaurant: restaurantData,
             restaurantName: restaurantData.name, // ✅ Pass restaurant name
-            seats: seatStatusData, 
+            seats: seatStatusData,
+            bookings: bookingsData.bookings || [],
+            allSeats: bookingsData.allSeats || []
         });
 
     } catch (error) {
@@ -54,6 +71,8 @@ router.get("/bookedInfo", ensureAuthenticated, async (req, res) => {
             restaurant: null,
             restaurantName: null,
             error: "Failed to load data.",
+            bookings: [],
+            allSeats: []
         });
     }
 });
