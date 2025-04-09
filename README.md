@@ -7,6 +7,6 @@ This system contain three technologies
 - Application For Mobile : Native android app developed using Kotlin
 
 ## How its work
-The sytem is interconnected with these tech using RESTapi and FastApi. Postgres is used as the database.
+The sytem is interconnected with RESTapi and FastApi. Postgres is used as the database.
 
 
