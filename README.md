@@ -15,6 +15,8 @@ then that result is passed to the fastAPI that is connected with database, check
 if that is vaild ip_url, it try to fetch the video feed and using openCV we convert the video feed into individual frame, then the frame is processed in yolo to get the prediction about the
 seat status.
 
+The prediction is sent to android app in realtime using server send events (SSE)
+
 
 ## how to Run
 
