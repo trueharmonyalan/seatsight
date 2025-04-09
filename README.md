@@ -1,2 +1,3 @@
-# Seatsight - a system that let you see what the situation inside in a restaurant without going there.
-## under devlopment.
+![Seatsight Logo]()
+# Seatsight
+## Seatsight is a system that is designed to identify the available seats in restaurants. 
